@@ -1,0 +1,43 @@
+==================== 崩溃时间 ====================
+2025-12-12 00:22:07.500
+
+==================== 线程信息 ====================
+线程名称：main
+线程ID：1
+是否主线程：true
+
+==================== 设备与应用信息 ====================
+应用包名：com.example.testapp
+应用版本名：1.2.3
+应用版本号：123
+应用版本码（长）：1765520585
+
+设备制造商：Xiaomi
+设备型号：Mi 11
+Android版本：11
+Android SDK版本：30
+设备主板：lahaina
+CPU架构：arm64-v8a
+CPU架构（64位）：arm64-v8a
+系统版本：RKQ1.201112.002
+
+==================== 异常信息 ====================
+异常类型：java.lang.NullPointerException
+异常原因：Attempt to invoke virtual method 'String com.example.testapp.User.getName()' on a null object reference
+完整调用栈：
+java.lang.NullPointerException: Attempt to invoke virtual method 'String com.example.testapp.User.getName()' on a null object reference
+	at com.example.testapp.MainActivity.onProfileClick(MainActivity.java:156)
+	at com.example.testapp.MainActivity$$ExternalSyntheticLambda0.onClick(Unknown Source:0)
+	at android.view.View.performClick(View.java:7448)
+	at android.view.View.performClickInternal(View.java:7425)
+	at android.view.View.access$3600(View.java:810)
+	at android.view.View$PerformClick.run(View.java:28305)
+	at android.os.Handler.handleCallback(Handler.java:938)
+	at android.os.Handler.dispatchMessage(Handler.java:99)
+	at android.os.Looper.loop(Looper.java:223)
+	at android.app.ActivityThread.main(ActivityThread.java:7656)
+	at java.lang.reflect.Method.invoke(Native Method)
+	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:592)
+	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:947)
+
+==================== Cause异常 ====================

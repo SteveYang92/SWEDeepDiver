@@ -1,0 +1,22 @@
+Incident Identifier: 3FC7C1EC-7296-40AF-A5B8-C1B60BF04E25
+CrashReporter Key:   7FFE60D843B00C9E3B3E92545757E624
+Hardware Model:      iPhone14,2
+Process:             MyAwesomeApp [20566]
+Path:                /private/var/containers/Bundle/Application/UUID/MyAwesomeApp.app/MyAwesomeApp
+Identifier:          com.example.myawesomeapp
+Version:             1.2.3 (123)
+OS Version:          iPhone OS 17.1.2 (21B101)
+Date/Time:           2025-12-12 15:46:22.294
+
+Exception Type:      EXC_CRASH (SIGABRT)
+Exception Codes:     0x0000000000000000
+Triggered by Thread: 0
+
+Thread 0 Crashed:
+0   libsystem_kernel.dylib          0x00000001e8e8e1d4 __psynch_mutexwait + 8
+1   MyAwesomeApp                    0x00000001000b4a78 -[DatabaseManager performBlockingOperation] + 8 (DatabaseManager.m:89)
+2   MyAwesomeApp                    0x00000001000b3c4c -[ViewController loadUserData] + 20 (ViewController.m:45)
+3   UIKitCore                       0x00000001c3d2a8b8 -[UIViewController _sendViewDidLoad] + 12
+4   libdispatch.dylib               0x00000001a5b8c1d4 _dispatch_call_block_and_release + 32
+
+EOF

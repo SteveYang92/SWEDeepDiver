@@ -1,0 +1,42 @@
+==================== 崩溃时间 ====================
+2025-12-11 21:47:16.16
+
+==================== 线程信息 ====================
+线程名称：main
+线程ID：1
+是否主线程：true
+
+==================== 设备与应用信息 ====================
+应用包名：com.example.testapp
+应用版本名：1.2.3
+应用版本号：123
+应用版本码（长）：1765520585
+
+设备制造商：Xiaomi
+设备型号：Mi 11
+Android版本：11
+Android SDK版本：30
+设备主板：lahaina
+CPU架构：arm64-v8a
+CPU架构（64位）：arm64-v8a
+系统版本：RKQ1.201112.002
+
+==================== 异常信息 ====================
+异常类型：java.lang.OutOfMemoryError
+异常原因：Failed to allocate a 52428812 byte allocation with 25165824 free bytes and 23MB until OOM
+完整调用栈：
+java.lang.OutOfMemoryError: Failed to allocate a 52428812 byte allocation with 25165824 free bytes and 23MB until OOM
+	at java.util.Arrays.copyOf(Arrays.java:3257)
+	at java.lang.AbstractStringBuilder.expandCapacity(AbstractStringBuilder.java:137)
+	at java.lang.AbstractStringBuilder.ensureCapacityInternal(AbstractStringBuilder.java:121)
+	at java.lang.AbstractStringBuilder.append(AbstractStringBuilder.java:649)
+	at java.lang.StringBuilder.append(StringBuilder.java:202)
+	at com.example.testapp.ImageProcessor.processLargeImage(ImageProcessor.java:234)
+	at com.example.testapp.MainActivity.loadHighResImages(MainActivity.java:178)
+	at com.example.testapp.MainActivity.onCreate(MainActivity.java:56)
+	at android.app.Activity.performCreate(Activity.java:8000)
+	at android.app.Activity.performCreate(Activity.java:7984)
+	at android.app.Instrumentation.callActivityOnCreate(Instrumentation.java:1309)
+	at android.app.ActivityThread.performLaunchActivity(ActivityThread.java:3404)
+
+==================== Cause异常 ====================

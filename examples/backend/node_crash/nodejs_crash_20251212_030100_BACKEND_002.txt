@@ -1,0 +1,17 @@
+2025-12-12 03:01:00.657 FATAL [c0bf86ba1b6e4bf3] UnhandledPromiseRejection: Error: Connection pool timeout
+    at ConnectionPool.acquire (2025-12-12 03:01:00.657)
+    at async UserService.getUser (2025-12-12 03:01:00.657)
+    at async authenticate (2025-12-12 03:01:00.657)
+
+2025-12-12 03:01:00.657 FATAL [c0bf86ba1b6e4bf3] Process will terminate
+2025-12-12 03:01:00.657 FATAL [c0bf86ba1b6e4bf3] Error: connect ECONNREFUSED 127.0.0.1:5432
+    at TCPConnectWrap.afterConnect [as oncomplete] (net.js:1148:16)
+    at TCPConnectWrap.callbackTrampoline (internal/async_hooks.js:130:17)
+
+Node.js Process Report:
+=======================
+Process ID: 11745
+Command: node /app/server.js
+Node Version: v18.18.0
+Platform: linux x64
+Memory Usage: 2.1GB / 4GB (OOM imminent)

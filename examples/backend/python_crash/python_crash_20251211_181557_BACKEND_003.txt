@@ -1,0 +1,19 @@
+2025-12-11 18:15:57.811 ERROR [f801cbf0a9264f38] Task exception was never retrieved
+future: <Task finished name='Task-123' coro=<WebSocketHandler.listen() done, defined at /app/websocket.py:45> exception=ConnectionResetError(1006, 'connection closed abnormally')>
+Traceback (most recent call last):
+  File "/app/websocket.py", line 67, in listen
+    await self.handle_message(message)
+  File "/app/websocket.py", line 89, in handle_message
+    result = await self.db.execute(query)
+  File "/app/database.py", line 234, in execute
+    return await self.pool.fetch(query)
+  File "/usr/local/lib/python3.11/site-packages/asyncpg/connection.py", line 1789, in fetch
+    return await self._execute(query, args, 0, timeout)
+asyncpg.exceptions.ConnectionDoesNotExistError: connection was closed unexpectedly
+
+System Information:
+==================
+Pod: api-service-93381
+Node: ip-10-0-52-136.ec2.internal
+Python: 3.11.6
+Memory: 1.8GB used, 2.2GB available

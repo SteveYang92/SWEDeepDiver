@@ -1,0 +1,28 @@
+----- pid 16953 at 2025-12-12 03:34:11 -----
+Cmd line: com.example.testapp
+
+JNI: CheckJNI is off; workarounds are off; pins=0; globals=272
+
+DALVIK THREADS (15):
+"main" prio=5 tid=1 Sleeping
+  | group="main" sCount=1 dsCount=0 flags=1 obj=0x72e4c8e8 self=0xb400007c7e814c00
+  | sysTid=16953 nice=0 cgrp=default sched=0/0 handle=0x7d7b5e6504
+  | state=S schedstat=( 932047224 155738359 1192 ) utm=71 stm=21 core=6 HZ=100
+  | stack=0x7ff072e000-0x7ff0730000 stackSize=8192KB
+  | held mutexes=
+  at java.lang.Thread.sleep(Native Method)
+  at java.lang.Thread.sleep(Thread.java:440)
+  at java.lang.Thread.sleep(Thread.java:356)
+  at com.example.testapp.HeavyService.performHeavyOperation(HeavyService.java:89)
+  at com.example.testapp.HeavyService.onHandleIntent(HeavyService.java:45)
+  at android.app.IntentService$ServiceHandler.handleMessage(IntentService.java:78)
+  at android.os.Handler.dispatchMessage(Handler.java:106)
+  at android.osLooper.loop(Looper.java:223)
+  at android.app.ActivityThread.main(ActivityThread.java:7656)
+
+"Signal Catcher" daemon prio=10 tid=7 Runnable
+  | group="system" sCount=0 dsCount=0 flags=0 obj=0x72e50000 self=0xb400007c7e824000
+  | sysTid=16954 nice=-20 cgrp=default sched=0/0 handle=0x7c7a7eccb0
+  | state=R schedstat=( 2196159 139583319 68 ) utm=0 stm=0 core=5 HZ=100
+  | stack=0x7c797f0000-0x7c79810000 stackSize=991KB
+  | held mutexes= "mutator lock"(shared held)

@@ -1,0 +1,3 @@
+12-12 00:22:05.273 13592-12345/com.example.testapp I/MainActivity: App启动成功
+12-12 00:22:07.273 13592-12345/com.example.testapp I/MainActivity: User clicked profile button
+12-12 00:22:07.423 13592-12345/com.example.testapp D/UserManager: Loading user data...

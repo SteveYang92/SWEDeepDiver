@@ -1,0 +1,10 @@
+2025-12-12 06:17:16.296 MyAwesomeApp[35530:123456] [MemoryTracker] Memory usage: 80MB
+2025-12-12 06:17:17.296 MyAwesomeApp[35530:123456] [MemoryTracker] Memory usage: 130MB
+2025-12-12 06:17:18.296 MyAwesomeApp[35530:123456] [MemoryTracker] Memory usage: 180MB
+2025-12-12 06:17:19.296 MyAwesomeApp[35530:123456] [MemoryTracker] Memory usage: 230MB
+2025-12-12 06:17:20.296 MyAwesomeApp[35530:123456] [MemoryTracker] Memory usage: 280MB
+2025-12-12 06:17:21.296 MyAwesomeApp[35530:123456] [MemoryTracker] Memory usage: 330MB
+2025-12-12 06:17:21.296 MyAwesomeApp[35530:123456] [System] Received memory warning level 2
+2025-12-12 06:17:22.296 MyAwesomeApp[35530:123456] [MemoryTracker] Memory usage: 380MB
+2025-12-12 06:17:23.296 MyAwesomeApp[35530:123456] [MemoryTracker] Memory usage: 430MB
+2025-12-12 06:17:25.296 MyAwesomeApp[35530:123456] [ImageProcessor] Failed to allocate 50MB for image processing

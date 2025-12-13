@@ -1,0 +1,3 @@
+2025-12-11 18:15:55.661 [INFO] [f801cbf0a9264f38] WebSocket connection established | extra={"client_ip": "203.0.113.45", "user_agent": "MobileApp/2.0"}
+2025-12-11 18:15:57.661 [INFO] [f801cbf0a9264f38] Executing user query
+2025-12-11 18:15:57.811 [ERROR] [f801cbf0a9264f38] Connection reset by peer

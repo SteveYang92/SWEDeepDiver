@@ -1,0 +1,3 @@
+12-12 03:34:05.428 16953-12345/com.example.testapp I/MainActivity: Performing heavy database operation
+12-12 03:34:11.428 16953-12345/com.example.testapp E/ActivityManager: ANR in com.example.testapp
+12-12 03:34:11.428 16953-12345/com.example.testapp E/ActivityManager: Reason: executing service com.example.testapp/.HeavyService

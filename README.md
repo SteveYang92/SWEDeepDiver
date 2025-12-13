@@ -1,0 +1,315 @@
+# SWEDeepDiver
+
+SWEDeepDiver 是一个面向 **软件工程（SWE）问题** 的自动化分析 Agent，  
+用于在真实工程环境中，对 **Android / iOS / Backend / Frontend** 等多技术栈的问题进行深度诊断与根因定位。
+
+它模拟有经验的工程师排查习惯：从整体到局部、从现象到本质，综合利用日志、异常 Trace、问题目录、源码和知识库，构建“时间线 + 证据链”，最终给出结构化、可验证的诊断结论。
+
+---
+
+## 核心特性
+
+### 1. 覆盖典型 SWE 场景
+
+- **多技术栈支持**
+  - 移动端：Android / iOS（Crash、ANR、Trace）
+  - Web 前端：构建日志、运行时错误、白屏问题等
+  - 后端 / 服务端：5xx、超时、服务崩溃、网关错误等
+- **多种输入形态**
+  - 仅问题描述
+  - 问题描述 + 日志（单文件或目录）
+  - 问题描述 + 问题目录（logs / traces / 截图 / 配置等）
+  - 问题描述 + 源码仓库地址  
+  Agent 会根据输入自动选择合适的初始化策略与工具组合。
+
+### 2. 全要素综合分析
+
+- 支持对以下信息源进行综合分析：
+  - 日志文件
+  - Crash / ANR / 异常 Trace
+  - 问题目录（issue bundle）
+  - 源码（结合日志使用代码分析）
+  - 知识库（平台与业务经验）
+- 不只给“猜测”，而是尝试构建：
+  - 清晰的时间线（Timeline）
+  - 从根因 → 中间技术事件 → 表象问题的证据链（Evidence Chain）
+  - 并为结论标注：**置信度** + **证据强度**
+
+### 3. 自动化 + LLM 审核双层机制
+
+- **Analyzer（DeepDiver Agent）**
+  - 自动完成：问题解析 → 工具选择 → 日志/Trace/目录分析 → 构建时间线与证据链 → 初步结论。
+- **Reviewer（Review Agent）**
+  - 对 Analyzer 的结论进行“复核/审稿”：
+    - 检查证据是否充分
+    - 提示缺失的视角或可能的其他原因
+- 形成 **analyze → review → refine** 的循环，降低“看起来合理但证据不足”的风险。
+
+### 4. 渐进式知识系统
+
+- 按需加载知识：
+  - 根据问题内容与日志特征，动态选择相关知识 Key（如 Common、Crash、Network 等）
+- 知识可扩展：
+  - 通过 `knowledge/` 与 `knowledge_config.toml` 自行新增、修改知识条目
+  - 支持按团队/项目定义特定错误模式与排查经验
+
+### 5. 可配置的 LLM 与工具策略
+
+- 在 `config/config.toml` 中可以：
+  - 切换不同 LLM 供应商和模型（如 DeepSeek、Qwen、GLM 等，走 OpenAI 兼容接口）
+  - 分别为 DeepDiver / Inspector / Reviewer 设置模型、温度、超时等参数
+  - 配置工具相关参数（如 grep 的最大行数、日志截断策略等）
+- 核心逻辑尽量与模型解耦，方便接入/更换不同 LLM 服务。
+
+### 6. 自定义脱敏与解密策略
+
+- 支持对日志做统一的预处理（解密、脱敏、格式归一化等）：
+  - 预处理逻辑位于 `preprocess/` 与 `app/processor.py`
+  - 框架提供脱敏接口 `IDataMasker` 与 解密接口 `IDecryptor`
+- 用户可：
+  1. 在 `preprocess/` 中实现自定义的 `IDataMasker` / `IDecryptor` 类
+  2. 在 `app/processor.py` 中配置使用自己的实现
+  3. Agent 在调用日志分析工具前，会先通过预处理管线生成“安全、可分析的日志文件”
+
+---
+
+## 目录概览（简要）
+
+```text
+├── app/                # Agent 配置与预处理管线（含自定义脱敏/解密绑定）
+├── config/             # 主配置、知识配置、inspect 规则
+├── examples/           # 各平台示例问题（Android / iOS / backend 等）
+├── knowledge/          # 知识文档（按知识 Key 命名）
+├── preprocess/         # 默认脱敏与解密实现，可扩展
+├── prompt/             # DeepDiver / Inspector / Reviewer 等 Prompt 模板
+├── react_core/         # Agent 核心逻辑与 LLM 封装
+├── tools/              # Grep / Glob / Inspect / ProcessFile / Review / AnalyzeCode 等工具
+├── workspace/          # 运行时工作区（如处理后的日志）
+├── run.py              # 运行入口
+└── test_case.py        # 示例测试用例入口
+```
+
+如需了解具体工具和代码细节，可直接查看对应目录下的实现。
+
+---
+
+## 配置说明（简要）
+
+### 1. 基本配置
+
+1. 复制配置模板：
+
+```bash
+cp config/config_example.toml config/config.toml
+cp config/knowledge_config_example.toml config/knowledge_config.toml
+cp config/inspect_rules_example.md config/inspect_rules.md
+```
+
+2. 编辑 `config/config.toml`，配置：
+
+- DeepDiver / Inspector / Reviewer 使用的模型、地址、API Key
+- 最大步数、token 限制、temperature、超时等
+- 工具相关参数（如 grep 行数限制、issue 目录等）
+
+3. 按需调整：
+
+- `config/knowledge_config.toml`：为不同知识 Key 配置关键词，支持自动选择知识库
+- `config/inspect_rules.md`：为日志 Inspect 定义/修改匹配规则（如页面生命周期、环境信息等）
+
+### 2. 自定义脱敏与解密（可选）
+
+1. 在 `preprocess/` 中实现接口：
+
+```python
+# 示例：自定义脱敏
+from preprocess.datamask import IDataMasker
+
+class MyDataMasker(IDataMasker):
+    def mask(self, raw: str) -> str:
+        # TODO: 在这里实现对敏感信息的脱敏逻辑
+        return masked
+```
+
+```python
+# 示例：自定义解密
+from preprocess.descyptor import IDecryptor
+
+class MyDecryptor(IDecryptor):
+    def decrypt(self, input_file_path, output_dir, filename):
+        # TODO: 在这里实现解密逻辑
+        return output_file_path
+```
+
+2. 在 `app/processor.py` 中绑定你的实现，使之成为当前使用的策略。
+
+Agent 在对日志进行分析前，会先通过 `process_file` 工具调用这条管线生成“处理后日志”，再进行 `grep` / `inspect` 等操作。
+
+---
+
+## 示例与使用方式
+
+### 1. 安装依赖
+
+```bash
+git clone https://github.com/SteveYang92/SWEDeepDiver.git SWEDeepDiver
+cd SWEDeepDiver
+
+# 推荐使用 pip 或 uv 安装依赖
+pip install -r requirements.txt
+# 或：uv pip install -r requirements.txt
+```
+
+按前文步骤完成 `config/`、`knowledge/` 等配置。
+
+### 2. 运行内置示例
+
+可以通过 `test_case.py` 选择要演示的问题，例如：
+
+```python
+# test_case.py 示例节选
+issue_backend_node_crash = r"""
+node 挂了，请分析原因
+
+问题目录：examples/backend/node_crash
+"""
+
+# 测试入口
+test_case_entry = issue_backend_node_crash
+```
+
+然后在项目根目录执行：
+
+```bash
+# 使用默认模型作为主 Agent
+python run.py
+
+# 或：使用 glm 模型作为主 Agent（需在 config 中配置好对应模型）
+python run.py glm
+```
+
+运行后，SWEDeepDiver 将会：
+
+1. 读取 `test_case_entry` 中的问题描述与问题目录；
+2. 自动识别问题类型与可用证据源（日志 / Trace / 代码等）；
+3. 调用工具（例如 Glob → ProcessFile → Grep / Inspect 等）进行分析；
+4. 构建时间线和证据链，并通过 Reviewer 审核；
+5. 在终端输出结构化的诊断报告（包含结论、置信度、关键依据与时间线）。
+
+输出示例：
+```markdown
+**结论**：ANR的根本原因是`HeavyService.performHeavyOperation`方法在主线程中调用了`Thread.sleep`，导致主线程阻塞超过系统允许的服务执行时间（约5秒），从而触发ANR。
+
+**置信度**：高
+
+**证据强度**：高
+
+**核心依据**：
+
+1. **日志 / Trace 证据**：
+   - `03:34:05.428` MainActivity记录“Performing heavy database operation”，暗示耗时操作开始。
+     - 原始内容：`12-12 03:34:05.428 16953-12345/com.example.testapp I/MainActivity: Performing heavy database operation`
+   - `03:34:11.428` ActivityManager报告ANR，直接指出原因为执行服务`com.example.testapp/.HeavyService`。
+     - 原始内容：`12-12 03:34:11.428 16953-12345/com.example.testapp E/ActivityManager: ANR in com.example.testapp`
+     - 原始内容：`12-12 03:34:11.428 16953-12345/com.example.testapp E/ActivityManager: Reason: executing service com.example.testapp/.HeavyService`
+   - **ANR Trace 显示主线程堆栈**：
+     - 主线程（`"main"`）状态为`Sleeping`，堆栈最顶层为`java.lang.Thread.sleep(Native Method)`，并最终调用到`com.example.testapp.HeavyService.performHeavyOperation(HeavyService.java:89)`。
+     - 原始内容（关键行）：
+       ```
+       "main" prio=5 tid=1 Sleeping
+         ...
+         at java.lang.Thread.sleep(Native Method)
+         at java.lang.Thread.sleep(Thread.java:440)
+         at java.lang.Thread.sleep(Thread.java:356)
+         at com.example.testapp.HeavyService.performHeavyOperation(HeavyService.java:89)
+         at com.example.testapp.HeavyService.onHandleIntent(HeavyService.java:45)
+         at android.app.IntentService$ServiceHandler.handleMessage(IntentService.java:78)
+         ...
+       ```
+
+2. **知识依据**：
+   - 无（ANR相关诊断知识库未能加载，但根据Android开发常识，主线程执行耗时操作（如Thread.sleep）会直接导致ANR）。
+
+3. **代码分析依据（如有）**：
+   - 无（未提供源码仓库地址，但Trace已明确指向代码行`HeavyService.java:89`）。
+
+4. **其他依据（如有）**：
+   - 无
+
+5. **因果关系**：
+   - **根因**：`HeavyService.performHeavyOperation`中调用`Thread.sleep`，使主线程进入休眠。
+   - **中间技术事件**：主线程被阻塞，无法处理系统事件（输入、广播、服务超时检查等）。
+   - **表象问题**：系统检测到服务`com.example.testapp/.HeavyService`执行时间超过阈值（约5秒），触发ANR。
+   - **时间关系**：耗时操作开始（03:34:05.428）到ANR上报（03:34:11.428）间隔约6秒，符合Android服务ANR的典型超时时间（前台服务5秒，后台服务可能更长）。
+
+**时间线**：
+
+| 时间              | 事件                                                                 | 来源                      |
+|-------------------|----------------------------------------------------------------------|---------------------------|
+| 03:34:05.428      | MainActivity记录“Performing heavy database operation”，疑似HeavyService开始执行耗时操作。 | 日志：MainActivity        |
+| 03:34:11.428      | ActivityManager报告ANR，原因为“executing service com.example.testapp/.HeavyService”。 | 日志：ActivityManager     |
+| 03:34:11（同一时刻） | ANR Trace捕获主线程状态为Sleeping，堆栈显示位于`HeavyService.performHeavyOperation`的sleep调用。 | Trace：Dalvik Threads     |
+
+**进一步建议（可选）**：
+
+- **立即修复**：检查`HeavyService.java`第89行附近的代码，确保耗时的数据库操作或任何阻塞调用不在主线程执行。若服务本应在后台工作，请确认`HeavyService`是否正确继承了`IntentService`，且`onHandleIntent`中的工作未意外切换到主线程（例如通过`runOnUiThread`或直接在主线程中启动服务）。
+- **补充排查**：若问题复现，可收集更完整的系统日志（`logcat -b events`）以确认ANR前后的输入事件分发情况。
+- **其他可能原因（低置信度）**：
+  - 主线程可能同时被其他操作（如同步I/O、复杂计算）阻塞，但Trace中未显示其他明显阻塞点，当前证据已足够定位。
+```
+### 3. 接入你自己的问题
+
+你可以：
+
+- 在 `examples/` 下创建自己的问题目录（包含日志、Trace、配置等）
+- 在 `test_case.py` 中新增一个对应的 `issue_xxx` 文本块，指定问题描述和问题目录
+- 修改 `test_case_entry` 指向你的问题，即可快速试跑
+
+---
+
+## 技术栈
+
+- **语言**：Python
+- **构建与依赖**：`pyproject.toml` + `requirements.txt`（推荐搭配 `uv`）
+- **LLM 接入**：多供应商 / 多模型（OpenAI 兼容接口）
+- **工具支持**：基于 ripgrep 等能力实现的 Grep、目录探索 Glob、日志 Inspect、可插拔 ProcessFile 等
+- 目前AnalyzeCode工具是通过`Calude Code CLI`非交互调用实现的，如需测试，请先确保有Claude Code环境
+
+---
+
+如果你希望将 SWEDeepDiver 集成到 CI / 问题排查平台 / 内部开发工具中，可以：
+
+- 复用 `react_core/` + `tools/` 作为后端服务能力；
+- 使用你自己的 LLM 配置与知识库；
+- 利用 `preprocess/` + `app/processor.py` 接入企业内部的日志解密与脱敏规范。
+
+
+
+
+## 致谢
+
+本项目:
+- 在配置系统上参考了[OpenManus](https://github.com/FoundationAgents/OpenManus)的实践经验。
+- 在提示语和工具设计上参考了[ClaudeCode](https://github.com/anthropics/claude-code)
+
+在此对 OpenManus/ClaudeCode 项目的作者与社区表示感谢。
+---
+
+## 免责声明
+
+1. **数据安全与合规性**
+   - SWEDeepDiver 主要面向本地/自有环境使用，不会主动向项目外部传输你的日志、源码或其他数据，除非你在配置中显式选择调用第三方 LLM 服务。
+   - 日志、Trace、源码等数据可能包含敏感信息（如用户隐私、业务机密、访问密钥等）。请在使用前确保：
+     - 已根据公司/组织的安全规范进行必要的脱敏与访问控制；
+     - 如需使用云端 LLM 服务，已评估并接受相应数据合规与风险。
+   - 项目提供了 `IDataMasker` 与 `IDecryptor` 等接口，方便你在 `preprocess/` 与 `app/processor.py` 中实现自定义的脱敏与解密策略，但**如何配置与使用这些策略、是否满足你所在组织的安全要求，完全由你自行负责**。
+
+2. **诊断结果的有限性**
+   - SWEDeepDiver 依赖日志、Trace、知识库与 LLM 能力给出自动化诊断结论，这些结论：
+     - 可能受限于数据缺失、知识不完整、模型能力等因素；
+     - 不保证在任何场景下都完全准确或覆盖所有可能根因。
+   - 本项目的输出仅作为**辅助分析工具**，不应被视为对生产系统行为的唯一判断依据。对于重要的生产事故、合规风险或高价值业务问题，仍建议由具备相应经验的工程师进行最终审核与决策。
+
+3. **使用风险**
+   - 使用本项目即表示你理解并接受：项目以 “按现状（as-is）” 方式提供，不对任何直接或间接损失（包括但不限于业务损失、数据泄露、系统不可用）承担责任。
+   - 请在受控环境中逐步验证和引入本项目，避免在未充分验证前直接用于关键生产系统。
+```

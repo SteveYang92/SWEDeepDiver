@@ -1,0 +1,17 @@
+2025-12-11 19:53:25.666 [FATAL] [d27d64dfcfce4f8b] [DeadlockDetector] Deadlock detected!
+2025-12-11 19:53:25.666 [WARN] [d27d64dfcfce4f8b] [ThreadMonitor] Thread pool exhaustion detected
+
+Found one Java-level deadlock:
+=============================
+"pool-1-thread-5":
+  waiting to lock monitor 0x00007f8c4c001234 (object 0x0000000789abcdef, a com.example.app.UserLock),
+  which is held by "pool-1-thread-3"
+"pool-1-thread-3":
+  waiting to lock monitor 0x00007f8c4c005678 (object 0x0000000789fedcba, a com.example.app.OrderLock),
+  which is held by "pool-1-thread-5"
+
+Thread Pool Status:
+===================
+Active Threads: 200 (MAX)
+Queue Size: 15,847 tasks
+Rejected Tasks: 1,234

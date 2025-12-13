@@ -1,0 +1,15 @@
+2025-12-12 05:06:01.654 [ERROR] [c58c438d02014633] [com.example.app.Application] Application terminated due to OOM
+2025-12-12 05:06:01.654 [ERROR] [c58c438d02014633] [java.lang.OutOfMemoryError] Heap space exhaustion
+Exception in thread "main" java.lang.OutOfMemoryError: Java heap space
+	at com.example.app.service.ImageProcessor.resize(ImageProcessor.java:234)
+	at com.example.app.controller.MediaController.upload(MediaController.java:178)
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87)
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1081)
+
+Heap Dump Information:
+========================
+Date: 2025-12-12T05:06:01.654497
+File: /var/log/heapdump-c58c438d02014633.hprof
+Size: 4.2GB
+JVM Version: OpenJDK 17.0.8
+================================================

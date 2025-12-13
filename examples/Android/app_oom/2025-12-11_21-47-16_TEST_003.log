@@ -1,0 +1,11 @@
+12-11 21:47:05.429 17624-12345/com.example.testapp D/MemoryMonitor: Current memory usage: 50MB
+12-11 21:47:06.429 17624-12345/com.example.testapp D/MemoryMonitor: Current memory usage: 80MB
+12-11 21:47:07.429 17624-12345/com.example.testapp D/MemoryMonitor: Current memory usage: 110MB
+12-11 21:47:08.429 17624-12345/com.example.testapp D/MemoryMonitor: Current memory usage: 140MB
+12-11 21:47:09.429 17624-12345/com.example.testapp D/MemoryMonitor: Current memory usage: 170MB
+12-11 21:47:10.429 17624-12345/com.example.testapp D/MemoryMonitor: Current memory usage: 200MB
+12-11 21:47:11.429 17624-12345/com.example.testapp D/MemoryMonitor: Current memory usage: 230MB
+12-11 21:47:12.429 17624-12345/com.example.testapp D/MemoryMonitor: Current memory usage: 260MB
+12-11 21:47:13.429 17624-12345/com.example.testapp D/MemoryMonitor: Current memory usage: 290MB
+12-11 21:47:14.429 17624-12345/com.example.testapp D/MemoryMonitor: Current memory usage: 320MB
+12-11 21:47:16.429 17624-12345/com.example.testapp E/AndroidRuntime: java.lang.OutOfMemoryError: Failed to allocate a 52428812 byte allocation with 25165824 free bytes and 23MB until OOM

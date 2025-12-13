@@ -1,0 +1,13 @@
+2025-12-12 07:40:06.662 ERROR [048af326bb3c4560] [Kubernetes] Container terminated
+2025-12-12 07:40:06.662 WARN [048af326bb3c4560] [cgroup] Memory limit exceeded
+
+Container Kill Event:
+====================
+Container ID: docker://5c7514e37643
+Pod: api-service-93381
+Namespace: production
+Node: ip-10-0-52-136.ec2.internal
+Kill Reason: OOM
+Exit Code: 137 (SIGKILL)
+Memory Limit: 4Gi
+Memory Usage: 4.2Gi (105% of limit)

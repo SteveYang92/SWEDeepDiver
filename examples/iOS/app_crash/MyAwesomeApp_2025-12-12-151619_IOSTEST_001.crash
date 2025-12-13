@@ -1,0 +1,22 @@
+Incident Identifier: 797F9021-790E-4D0D-B976-27975D7F4222
+CrashReporter Key:   36BD166737BD50F9BC14E463CA6EC4D2
+Hardware Model:      iPhone14,2
+Process:             MyAwesomeApp [36119]
+Path:                /private/var/containers/Bundle/Application/UUID/MyAwesomeApp.app/MyAwesomeApp
+Identifier:          com.example.myawesomeapp
+Version:             1.2.3 (123)
+OS Version:          iPhone OS 17.1.2 (21B101)
+Date/Time:           2025-12-12 15:16:19.493
+
+Exception Type:      EXC_BAD_ACCESS (SIGSEGV)
+Exception Codes:     KERN_INVALID_ADDRESS at 0x0000000000000000
+Triggered by Thread: 0
+
+Thread 0 Crashed:
+0   libobjc.A.dylib                 0x00000001a5b8c1d4 objc_msgSend + 20
+1   MyAwesomeApp                    0x00000001000a3c78 -[ViewController handleProfileTap] + 48 (ViewController.m:45)
+2   MyAwesomeApp                    0x00000001000a2e4c -[ViewController viewDidLoad] + 56 (ViewController.m:23)
+3   UIKitCore                       0x00000001c3d2a8b8 -[UIViewController _sendViewDidLoad] + 12
+4   UIKitCore                       0x00000001c3d2c890 -[UIViewController loadViewIfRequired] + 120
+
+EOF

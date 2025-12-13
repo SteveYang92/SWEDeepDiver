@@ -1,0 +1,3 @@
+2025-12-12 15:16:16.293 MyAwesomeApp[29771:123456] [AppDelegate] Application didFinishLaunchingWithOptions
+2025-12-12 15:16:19.293 MyAwesomeApp[29771:123456] [ViewController] User tapped profile button
+2025-12-12 15:16:19.493 MyAwesomeApp[29771:123456] [UserManager] Attempting to access user object at memory address

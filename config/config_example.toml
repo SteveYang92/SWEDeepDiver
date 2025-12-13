@@ -1,0 +1,66 @@
+# analyzer
+[deepdiver]
+max_steps = 30
+[deepdiver.llm]
+model = "deepseek-reasoner"
+base_url = "https://api.deepseek.com/v1"
+api_key = "YOUR API KEY"
+max_tokens = 8192
+temperature = 0.1
+timeout = 120.0
+enable_thinking = true
+dump_thinking = true
+dump_answer = true
+# override default llm config
+[deepdiver.llm.glm]
+model = "glm-4.6"
+base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+api_key = "YOUR API KEY"
+
+# log inspector
+[inspector]
+max_line_of_grep = 100
+max_length_of_line = 400
+[inspector.pattern]
+error_pattern = "error"
+exception_pattern = "^(?!.*ExecutionException)\\S*\\s*\\w+(\\.\\w+)*Exception:"
+env_pattern = "app version:.*"
+context_pattern = "ActMgr"
+[inspector.llm]
+model = "qwen-flash"
+base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+api_key = "YOUR API KEY"
+max_tokens = 10240
+temperature = 0.2
+timeout = 120.0
+enable_thinking = false
+dump_thinking = false
+dump_answer = false
+
+# reviewer
+[reviewer]
+max_commit_count = 5
+[reviewer.llm]
+model = "deepseek-reasoner"
+base_url = "https://api.deepseek.com/v1"
+api_key = "YOUR API KEY"
+max_tokens = 10240
+temperature = 0.1
+timeout = 120.0
+enable_thinking = true
+dump_thinking = true
+dump_answer = false
+
+# tool config
+[tools]
+[tools.grep]
+max_line_of_grep = 100
+
+# issue dir config
+[issue_dir]
+dirs = ["examples"]
+
+# log filter config
+[log_processor]
+max_char_count_per_line = 400
+ignore_patterns = [""]
