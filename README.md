@@ -118,7 +118,7 @@ cp config/inspect_rules_example.md config/inspect_rules.md
 
 ### 2. 自定义脱敏与解密（可选）
 
-1. 在 `preprocess/` 中实现接口：
+1. 实现接口：
 
 ```python
 # 示例：自定义脱敏
@@ -157,6 +157,9 @@ cd SWEDeepDiver
 # 推荐使用 pip 或 uv 安装依赖
 pip install -r requirements.txt
 # 或：uv pip install -r requirements.txt
+
+# 安装ripgrep
+# 安装命令可自行google
 ```
 
 按前文步骤完成 `config/`、`knowledge/` 等配置。
@@ -282,8 +285,15 @@ python run.py glm
 - 使用你自己的 LLM 配置与知识库；
 - 利用 `preprocess/` + `app/processor.py` 接入企业内部的日志解密与脱敏规范。
 
+## 未来规划
+这是一个边学边做项目，代码层面，还有很多不完善的地方，功能层面未来规划如下：
 
+- [ ] 增加图片、视频理解能力：接入Vision LLM
+- [ ] 增加网络搜索能力：WebSearch tool
+- [ ] 完善代码分析能力：代码库配置完善、分析提示优化、Code Agent可配置
+- [ ] 增加远端代码库自动拉取
 
+---
 
 ## 致谢
 
@@ -292,6 +302,7 @@ python run.py glm
 - 在提示语和工具设计上参考了[ClaudeCode](https://github.com/anthropics/claude-code)
 
 在此对 OpenManus/ClaudeCode 项目的作者与社区表示感谢。
+
 ---
 
 ## 免责声明
