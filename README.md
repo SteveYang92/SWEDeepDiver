@@ -134,7 +134,7 @@ cp config/inspect_rules_example.md config/inspect_rules.md
 cp config/knowledge_config_example.toml config/knowledge_config.toml
 ```
 2. 配置知识索引：
-- `config/knowledge_config.toml`：为不同知识 Key 配置关键词，Agent运行时，此信息会自动注入此信息到上下文，Agent会据此加载问题相关的知识库
+- `config/knowledge_config.toml`：为不同知识 Key 配置关键词，Agent运行时，此信息会自动注入到上下文，Agent会据此加载问题相关的知识库
 3. 配置知识库：
 - 在`knowledge/`目录下创建知识文档，文档命名需和知识Key一致。
 - **知识文档提供了领域特定知识，良好的文档将大大提升Agent的问题定位能力**
