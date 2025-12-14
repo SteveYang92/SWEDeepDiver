@@ -3,7 +3,7 @@
 SWEDeepDiver 是一个面向 **软件工程（SWE）问题** 的自动化分析 Agent，  
 用于在真实工程环境中，对 **Android / iOS / Backend / Frontend** 等多技术栈的问题进行深度诊断与根因定位。
 
-它模拟有经验的工程师排查习惯：从整体到局部、从现象到本质，综合利用日志、异常 Trace、问题目录、源码和知识库，构建“时间线 + 证据链”，最终给出结构化、可验证的诊断结论。
+它模拟有经验的工程师排查习惯：从整体到局部、从现象到本质，综合利用日志、异常 Trace、多种问题文件、源码和知识库，构建“时间线 + 证据链”，最终给出结构化、可验证的诊断结论。
 
 ---
 
@@ -59,7 +59,6 @@ SWEDeepDiver 是一个面向 **软件工程（SWE）问题** 的自动化分析 
   - 切换不同 LLM 供应商和模型（如 DeepSeek、Qwen、GLM 等，走 OpenAI 兼容接口）
   - 分别为 DeepDiver / Inspector / Reviewer 设置模型、温度、超时等参数
   - 配置工具相关参数（如 grep 的最大行数、日志截断策略等）
-- 核心逻辑尽量与模型解耦，方便接入/更换不同 LLM 服务。
 
 ### 6. 自定义脱敏与解密策略
 
@@ -73,35 +72,49 @@ SWEDeepDiver 是一个面向 **软件工程（SWE）问题** 的自动化分析 
 
 ---
 
-## 目录概览（简要）
-
-```text
-├── app/                # Agent 配置与预处理管线（含自定义脱敏/解密绑定）
-├── config/             # 主配置、知识配置、inspect 规则
-├── examples/           # 各平台示例问题（Android / iOS / backend 等）
-├── knowledge/          # 知识文档（按知识 Key 命名）
-├── preprocess/         # 默认脱敏与解密实现，可扩展
-├── prompt/             # DeepDiver / Inspector / Reviewer 等 Prompt 模板
-├── react_core/         # Agent 核心逻辑与 LLM 封装
-├── tools/              # Grep / Glob / Inspect / ProcessFile / Review / AnalyzeCode 等工具
-├── workspace/          # 运行时工作区（如处理后的日志）
-├── run.py              # 运行入口
-└── test_case.py        # 示例测试用例入口
+## 安装
+### 使用`uv`安装
+#### 1. 安装`uv`
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
-
-如需了解具体工具和代码细节，可直接查看对应目录下的实现。
+#### 2. Clone仓库
+```bash
+git clone https://github.com/SteveYang92/SWEDeepDiver.git SWEDeepDiver
+cd SWEDeepDiver
+```
+#### 3. 创建虚拟环境并激活
+```bash
+uv venv --python 3.11
+source .venv/bin/activate  # On Unix/macOS
+# Or on Windows:
+# .venv\Scripts\activate
+```
+#### 4. 安装依赖
+```bash
+uv pip install -r requirements.txt
+```
+#### 5. 安装ripgrep
+```bash
+brew install ripgrep # On macOS
+# 其他平台安装可参考ripgrep github介绍
+```
+#### 6. 安装Claude Code（可选）
+```bash
+npm install -g @anthropic-ai/claude-code
+# 更多安装方式可参考claude-code github介绍
+```
+> 目前AnalyzeCode工具是通过`Calude Code CLI`非交互调用实现的，如需使用代码分析功能，需有Claude Code环境
 
 ---
 
-## 配置说明（简要）
+## 配置
+### 1 Agent配置(重要)
 
-### 1. 基本配置
-
-1. 复制配置模板：
+1. 复制Agent配置模板：
 
 ```bash
 cp config/config_example.toml config/config.toml
-cp config/knowledge_config_example.toml config/knowledge_config.toml
 cp config/inspect_rules_example.md config/inspect_rules.md
 ```
 
@@ -112,12 +125,21 @@ cp config/inspect_rules_example.md config/inspect_rules.md
 - 工具相关参数（如 grep 行数限制、issue 目录等）
 
 3. 按需调整：
-
-- `config/knowledge_config.toml`：为不同知识 Key 配置关键词，支持自动选择知识库
 - `config/inspect_rules.md`：为日志 Inspect 定义/修改匹配规则（如页面生命周期、环境信息等）
 
-### 2. 自定义脱敏与解密（可选）
+### 2 知识配置（重要）
+1. 复制知识索引配置模板：
 
+```bash
+cp config/knowledge_config_example.toml config/knowledge_config.toml
+```
+2. 配置知识索引：
+- `config/knowledge_config.toml`：为不同知识 Key 配置关键词，Agent运行时，此信息会自动注入此信息到上下文，Agent会据此加载问题相关的知识库
+3. 配置知识库：
+- 在`knowledge/`目录下创建知识文档，文档命名需和知识Key一致。
+- **知识文档提供了领域特定知识，良好的文档将大大提升Agent的问题定位能力**
+
+### 3 数据预处理配置
 1. 实现接口：
 
 ```python
@@ -146,33 +168,14 @@ Agent 在对日志进行分析前，会先通过 `process_file` 工具调用这�
 
 ---
 
-## 示例与使用方式
-
-### 1. 安装依赖
-
-```bash
-git clone https://github.com/SteveYang92/SWEDeepDiver.git SWEDeepDiver
-cd SWEDeepDiver
-
-# 推荐使用 pip 或 uv 安装依赖
-pip install -r requirements.txt
-# 或：uv pip install -r requirements.txt
-
-# 安装ripgrep
-# 安装命令可自行google
-```
-
-按前文步骤完成 `config/`、`knowledge/` 等配置。
-
-### 2. 运行内置示例
+## 快速运行
 
 可以通过 `test_case.py` 选择要演示的问题，例如：
 
 ```python
 # test_case.py 示例节选
 issue_backend_node_crash = r"""
-node 挂了，请分析原因
-
+Node 挂了，请分析原因
 问题目录：examples/backend/node_crash
 """
 
@@ -183,10 +186,10 @@ test_case_entry = issue_backend_node_crash
 然后在项目根目录执行：
 
 ```bash
-# 使用默认模型作为主 Agent
+# 使用默认模型作为DeepDiver Agent模型
 python run.py
 
-# 或：使用 glm 模型作为主 Agent（需在 config 中配置好对应模型）
+# 或：使用 glm 模型作为DeepDiver Agent模型（需在 config.toml 中配置好对应模型）
 python run.py glm
 ```
 
@@ -259,23 +262,13 @@ python run.py glm
 - **其他可能原因（低置信度）**：
   - 主线程可能同时被其他操作（如同步I/O、复杂计算）阻塞，但Trace中未显示其他明显阻塞点，当前证据已足够定位。
 ```
-### 3. 接入你自己的问题
+### 接入你自己的问题
 
 你可以：
 
 - 在 `examples/` 下创建自己的问题目录（包含日志、Trace、配置等）
 - 在 `test_case.py` 中新增一个对应的 `issue_xxx` 文本块，指定问题描述和问题目录
 - 修改 `test_case_entry` 指向你的问题，即可快速试跑
-
----
-
-## 技术栈
-
-- **语言**：Python
-- **构建与依赖**：`pyproject.toml` + `requirements.txt`（推荐搭配 `uv`）
-- **LLM 接入**：多供应商 / 多模型（OpenAI 兼容接口）
-- **工具支持**：基于 ripgrep 等能力实现的 Grep、目录探索 Glob、日志 Inspect、可插拔 ProcessFile 等
-- 目前AnalyzeCode工具是通过`Calude Code CLI`非交互调用实现的，如需测试，请先确保有Claude Code环境
 
 ---
 
@@ -286,12 +279,16 @@ python run.py glm
 - 利用 `preprocess/` + `app/processor.py` 接入企业内部的日志解密与脱敏规范。
 
 ## 未来规划
-这是一个边学边做项目，代码层面，还有很多不完善的地方，功能层面未来规划如下：
+这是一个边学边做项目，代码层面，还有很多不完善的地方，后续逐步完善。功能层面未来规划如下：
 
-- [ ] 增加图片、视频理解能力：接入Vision LLM
+- [ ] ProcessFile tool 增强：
+  - [ ] 支持按文件类型插拔文件处理器
 - [ ] 增加网络搜索能力：WebSearch tool
-- [ ] 完善代码分析能力：代码库配置完善、分析提示优化、Code Agent可配置
-- [ ] 增加远端代码库自动拉取
+- [ ] 完善代码分析能力：
+  - [ ] 代码库配置完善
+  - [ ] Code Agent可配、可插拔
+  - [ ] 提示优化
+  - [ ] 远端代码库自动拉取
 
 ---
 

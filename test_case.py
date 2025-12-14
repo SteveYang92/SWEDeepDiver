@@ -35,7 +35,7 @@ java oom，请分析原因
 """
 
 issue_backend_node_crash = r"""
-node 挂了，请分析原因
+Node 挂了，请分析原因
 问题目录：examples/backend/node_crash
 """
 
