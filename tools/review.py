@@ -23,7 +23,7 @@ OTHER_BASIS_PLACE_HOLDER = "{{other_basis}}"
 CONCLUSION_PLACE_HOLDER = "{{conclusion}}"
 # system prompt placeholder
 KNOWLEDGE_DIR = config.knowledge_dir
-USER_INPUT_TEMPLATE_FILE = (config.config_dir / "evidence_format.md").resolve()
+USER_INPUT_TEMPLATE_FILE = (config.prompt_dir / "review_template.md").resolve()
 KNOWLEDGE_PLACE_HOLDER = "{{knowledge}}"
 COMMIT_COUNT_PLACE_HOLDER = "{{commit_count}}"
 MAX_COMMIT_COUNT_PLACE_HOLDER = "{{max_commit_count}}"
