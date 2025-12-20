@@ -267,7 +267,7 @@ tools = [
                     },
                     "limit": {
                         "type": "number",
-                        "description": "读取的行数，不填则使用默认值",
+                        "description": "读取的行数，不填则使用默认值（默认100，最大300）",
                     },
                 },
                 "required": ["file_path"],
