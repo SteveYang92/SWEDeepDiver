@@ -7,73 +7,8 @@ SWEDeepDiver 是一个面向 **软件工程（SWE）问题** 的自动化分析 
 
 ---
 
-## 核心特性
-
-### 1. 覆盖典型 SWE 场景
-
-- **多技术栈支持**
-  - 移动端：Android / iOS（Crash、ANR、Trace）
-  - Web 前端：构建日志、运行时错误、白屏问题等
-  - 后端 / 服务端：5xx、超时、服务崩溃、网关错误等
-- **多种输入形态**
-  - 仅问题描述
-  - 问题描述 + 日志（单文件或目录）
-  - 问题描述 + 问题目录（logs / traces / 截图 / 配置等）
-  - 问题描述 + 源码仓库地址  
-  Agent 会根据输入自动选择合适的初始化策略与工具组合。
-
-### 2. 全要素综合分析
-
-- 支持对以下信息源进行综合分析：
-  - 日志文件
-  - Crash / ANR / 异常 Trace
-  - 问题目录（issue bundle）
-  - 源码（结合日志使用代码分析）
-  - 知识库（平台与业务经验）
-- 不只给“猜测”，而是尝试构建：
-  - 清晰的时间线（Timeline）
-  - 从根因 → 中间技术事件 → 表象问题的证据链（Evidence Chain）
-  - 并为结论标注：**置信度** + **证据强度**
-
-### 3. 自动化 + LLM 审核双层机制
-
-- **Analyzer（DeepDiver Agent）**
-  - 自动完成：问题解析 → 工具选择 → 日志/Trace/目录分析 → 构建时间线与证据链 → 初步结论。
-- **Reviewer（Review Agent）**
-  - 对 Analyzer 的结论进行“复核/审稿”：
-    - 检查证据是否充分
-    - 提示缺失的视角或可能的其他原因
-- 形成 **analyze → review → refine** 的循环，降低“看起来合理但证据不足”的风险。
-
-### 4. 渐进式知识系统
-
-- 按需加载知识：
-  - 根据问题内容与日志特征，动态选择相关知识 Key（如 Common、Crash、Network 等）
-- 知识可扩展：
-  - 通过 `knowledge/` 与 `knowledge_config.toml` 自行新增、修改知识条目
-  - 支持按团队/项目定义特定错误模式与排查经验
-
-### 5. 可配置的 LLM 与工具策略
-
-- 在 `config/config.toml` 中可以：
-  - 切换不同 LLM 供应商和模型（如 DeepSeek、Qwen、GLM 等，走 OpenAI 兼容接口）
-  - 分别为 DeepDiver / Inspector / Reviewer 设置模型、温度、超时等参数
-  - 配置工具相关参数（如 grep 的最大行数、日志截断策略等）
-
-### 6. 自定义脱敏与解密策略
-
-- 支持对日志做统一的预处理（解密、脱敏、格式归一化等）：
-  - 预处理逻辑位于 `preprocess/` 与 `app/processor.py`
-  - 框架提供脱敏接口 `IDataMasker` 与 解密接口 `IDecryptor`
-- 用户可：
-  1. 在 `preprocess/` 中实现自定义的 `IDataMasker` / `IDecryptor` 类
-  2. 在 `app/processor.py` 中配置使用自己的实现
-  3. Agent 在调用日志分析工具前，会先通过预处理管线生成“安全、可分析的日志文件”
-
----
-
 ## 安装
-### 使用`uv`安装
+### 使用`uv`安装（推荐）
 #### 1. 安装`uv`
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -109,13 +44,12 @@ npm install -g @anthropic-ai/claude-code
 ---
 
 ## 配置
-### 1 Agent配置(重要)
+### 1 Agent配置
 
 1. 复制Agent配置模板：
 
 ```bash
 cp config/config_example.toml config/config.toml
-cp config/inspect_rules_example.md config/inspect_rules.md
 ```
 
 2. 编辑 `config/config.toml`，配置：
@@ -124,10 +58,8 @@ cp config/inspect_rules_example.md config/inspect_rules.md
 - 最大步数、token 限制、temperature、超时等
 - 工具相关参数（如 grep 行数限制、issue 目录等）
 
-3. 按需调整：
-- `config/inspect_rules.md`：为日志 Inspect 定义/修改匹配规则（如页面生命周期、环境信息等）
 
-### 2 知识配置（重要）
+### 2 知识配置
 1. 复制知识索引配置模板：
 
 ```bash

@@ -9,7 +9,7 @@ from pydantic import Field
 from app.config import config
 from app.processor import data_masker
 from react_core.tools import BaseTool, ToolInput, ToolResult, ToolError
-from util.grep_util import _is_in_roots, apply_time_filter
+from util.grep_util import is_in_roots, apply_time_filter
 from util.log_truncate import truncate_log_omit_edges
 
 
@@ -85,7 +85,7 @@ class GrepTool(BaseTool):
             return ToolResult(ok=False, content="No paths provided")
 
         for path in inp.paths:
-            if not _is_in_roots(p=path, log_sandbox_dirs=[self.log_sandbox_dir]):
+            if not is_in_roots(p=path, root_dirs=[self.log_sandbox_dir]):
                 return ToolResult(ok=False, content=f"[tool] path not allowed:{path}")
 
         # 构建 ripgrep 命令

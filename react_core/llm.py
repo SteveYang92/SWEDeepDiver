@@ -4,7 +4,7 @@ import asyncio
 import json
 import re
 from typing import List, Dict, Any, Optional
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from tenacity import (
     retry,
     stop_after_attempt,
@@ -22,28 +22,27 @@ logger = structlog.get_logger(__name__)
 
 @dataclass
 class LLMResult:
-    """LLM流式响应结果，包含推理内容、生成文本和工具调用"""
+    """LLM响应结果，包含推理详情、生成文本和工具调用信息。"""
 
-    content: str  # 生成的最终文本内容
-    reasoning_content: Optional[str] = None  # 推理/思考过程内容
-    tool_calls: Optional[List[Dict[str, Any]]] = None  # 需要执行的工具调用列表
-    usage: Optional[Any] = None  # Token使用情况
+    content: str
+    reasoning_details: Dict[str, Any] = field(default_factory=dict)
+    tool_calls: Optional[List[Dict[str, Any]]] = None
+    usage: Optional[Any] = None
 
     @property
     def requires_tool_execution(self) -> bool:
-        """是否需要执行工具调用"""
         return bool(self.tool_calls)
 
 
 class LLMClient:
     """
-    支持工具调用的流式LLM客户端
-    推理内容和工具调用将返回给调用方处理
+    支持推理内容提取与工具调用的LLM客户端，可按需切换流式/非流式传输。
     """
 
     def __init__(self, config: LLMConfig):
         self.client = AsyncOpenAI(api_key=config.api_key, base_url=config.base_url)
         self.config = config
+        self._default_stream = config.stream
 
     @retry(
         reraise=True,
@@ -55,220 +54,350 @@ class LLMClient:
         self,
         messages: List[Dict[str, Any]],
         tools: Optional[List[ChatCompletionToolParam]] = None,
+        stream: Optional[bool] = None,
     ) -> LLMResult:
         """
-        流式完成方法，支持返回推理内容和工具调用给调用方处理
-
         Args:
             messages: 对话消息列表
-            tools: 工具定义列表（可选）
-
-        Returns:
-            LLMResult: 包含推理内容、生成内容及工具调用信息的结果对象
+            tools: 工具定义列表
+            stream: 是否启用流式传输（默认读取配置）
         """
+        tools = tools or None
+        stream = self._default_stream if stream is None else stream
+
         logger.info(
             "llm.request",
             model=self.config.model,
             messages_count=len(messages),
             tools_count=len(tools) if tools else 0,
+            stream=stream,
         )
 
-        # 流式状态变量
-        reasoning_content = ""
-        answer_content = ""
-        is_answering = False
+        request_args = self._build_request_args(messages, tools)
 
-        # 工具调用累积器: {index: {"id": ..., "function": {"name": ..., "arguments": ...}}}
+        if stream:
+            return await self._stream_completion(request_args)
+        return await self._non_stream_completion(request_args)
+
+    async def _stream_completion(self, request_args: Dict[str, Any]) -> LLMResult:
+        reasoning_details: Dict[str, Any] = {}
         tool_calls_accumulator: Dict[int, Dict[str, Any]] = {}
+        answer_fragments: List[str] = []
+        answer_started = False
         usage = None
 
-        # 根据 dump_thinking 参数控制是否打印思考过程
-        if self.config.dump_thinking:
-            print("\n" + "=" * 20 + "思考过程" + "=" * 20 + "\n")
+        self._maybe_print_header("思考过程", self.config.dump_thinking)
 
         try:
-            # 创建流式请求
             completion = await asyncio.wait_for(
                 self.client.chat.completions.create(
-                    model=self.config.model,
-                    messages=messages,
-                    temperature=self.config.temperature,
-                    max_tokens=self.config.max_tokens,
-                    top_p=1.0,
-                    presence_penalty=0.0,
-                    frequency_penalty=0.0,
-                    extra_body={"enable_thinking": self.config.enable_thinking},
+                    **request_args,
                     stream=True,
                     stream_options={"include_usage": True},
-                    tools=tools,
-                    tool_choice="auto",
-                    parallel_tool_calls=True,
                 ),
                 timeout=self.config.timeout,
             )
 
-            # 处理流式响应
             async for chunk in completion:
-                if chunk.usage is not None:
-                    usage = chunk.usage
-
+                usage = chunk.usage or usage
                 if not chunk.choices:
                     continue
 
                 delta = chunk.choices[0].delta
 
-                # 累积工具调用信息（支持碎片化传输）
+                # 推理详情
+                raw_reasoning_details = self._extract_reasoning(delta)
+                if raw_reasoning_details:
+                    self._accumulate_reasoning_details(
+                        reasoning_details, raw_reasoning_details
+                    )
+                    if self.config.dump_thinking and not answer_started:
+                        print(
+                            self._render_reasoning_for_console(raw_reasoning_details),
+                            end="",
+                            flush=True,
+                        )
+
+                # 工具调用
                 if delta.tool_calls:
-                    for tool_call_chunk in delta.tool_calls:
-                        index = tool_call_chunk.index
+                    for call_chunk in delta.tool_calls:
+                        self._accumulate_tool_call_chunk(
+                            tool_calls_accumulator, call_chunk
+                        )
 
-                        # 初始化新的工具调用槽位
-                        if index not in tool_calls_accumulator:
-                            tool_calls_accumulator[index] = {
-                                "id": tool_call_chunk.id,
-                                "type": tool_call_chunk.type,
-                                "function": {"name": "", "arguments": ""},
-                            }
-
-                        # 累积函数名
-                        if tool_call_chunk.function and tool_call_chunk.function.name:
-                            tool_calls_accumulator[index]["function"][
-                                "name"
-                            ] = tool_call_chunk.function.name
-
-                        # 累积参数字符串（可能分多次接收）
-                        if (
-                            tool_call_chunk.function
-                            and tool_call_chunk.function.arguments
-                        ):
-                            tool_calls_accumulator[index]["function"][
-                                "arguments"
-                            ] += tool_call_chunk.function.arguments
-
-                # 收集并实时打印推理内容
-                if (
-                    hasattr(delta, "reasoning_content")
-                    and delta.reasoning_content is not None
-                ):
-                    if not is_answering:  # 确保推理内容在回答之前
-                        if self.config.dump_thinking:
-                            print(delta.reasoning_content, end="", flush=True)
-                        reasoning_content += delta.reasoning_content
-
-                # 收集并实时打印回答内容
-                if hasattr(delta, "content") and delta.content:
-                    if not is_answering:
-                        if self.config.dump_answer:
-                            # 首次进入回答阶段，打印标题
-                            print("\n" + "=" * 20 + "完整回复" + "=" * 20 + "\n")
-                        is_answering = True
+                # 文本内容
+                text_chunk = self._extract_text(delta)
+                if text_chunk:
+                    if not answer_started:
+                        answer_started = True
+                        self._maybe_print_header("完整回复", self.config.dump_answer)
                     if self.config.dump_answer:
-                        print(delta.content, end="", flush=True)
-                    answer_content += delta.content
+                        print(text_chunk, end="", flush=True)
+                    answer_fragments.append(text_chunk)
 
-        except asyncio.TimeoutError as e:
+        except asyncio.TimeoutError as exc:
             logger.error("llm.timeout")
-            raise TimeoutError("LLM request timed out") from e
+            raise TimeoutError("LLM request timed out") from exc
+        finally:
+            if (
+                self.config.dump_thinking or self.config.dump_answer
+            ) and answer_fragments:
+                print()
 
-        # 获取Token消耗数据
-        prompt_tokens = usage.prompt_tokens if usage else 0
-        completion_tokens = usage.completion_tokens if usage else 0
-        total_tokens = usage.total_tokens if usage else 0
+        content = "".join(answer_fragments)
+        tool_calls_list = (
+            [tool_calls_accumulator[idx] for idx in sorted(tool_calls_accumulator)]
+            if tool_calls_accumulator
+            else None
+        )
+        finalized_tools = (
+            self._finalize_tool_calls(tool_calls_list) if tool_calls_list else None
+        )
 
+        self._log_response(content, reasoning_details, usage)
+        return LLMResult(
+            content=content,
+            reasoning_details=reasoning_details,
+            tool_calls=finalized_tools,
+            usage=usage,
+        )
+
+    async def _non_stream_completion(self, request_args: Dict[str, Any]) -> LLMResult:
+        try:
+            response = await asyncio.wait_for(
+                self.client.chat.completions.create(**request_args),
+                timeout=self.config.timeout,
+            )
+        except asyncio.TimeoutError as exc:
+            logger.error("llm.timeout")
+            raise TimeoutError("LLM request timed out") from exc
+
+        if not response.choices:
+            raise RuntimeError("LLM returned no choices")
+
+        message = response.choices[0].message
+        reasoning_details: Dict[str, Any] = {}
+        raw_reasoning_details = self._extract_reasoning(message)
+        if raw_reasoning_details:
+            self._accumulate_reasoning_details(reasoning_details, raw_reasoning_details)
+
+        if self.config.dump_thinking and raw_reasoning_details:
+            self._maybe_print_header("思考过程", True)
+            print(self._render_reasoning_for_console(raw_reasoning_details), flush=True)
+
+        content = self._extract_text(message)
+        if self.config.dump_answer and content:
+            self._maybe_print_header("完整回复", True)
+            print(content, flush=True)
+
+        tool_calls = self._finalize_tool_calls(message.tool_calls or None)
+
+        self._log_response(content, reasoning_details, response.usage)
+        return LLMResult(
+            content=content,
+            reasoning_details=reasoning_details,
+            tool_calls=tool_calls,
+            usage=response.usage,
+        )
+
+    def _extract_reasoning(self, data):
+        if hasattr(data, "reasoning_details") and data.reasoning_details is not None:
+            return data.reasoning_details
+        if hasattr(data, "reasoning_content") and data.reasoning_content is not None:
+            return data.reasoning_content
+
+    def _build_request_args(
+        self,
+        messages: List[Dict[str, Any]],
+        tools: Optional[List[ChatCompletionToolParam]],
+    ) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {
+            "model": self.config.model,
+            "messages": messages,
+            "temperature": self.config.temperature,
+            "max_tokens": self.config.max_tokens,
+            "top_p": 1.0,
+            "presence_penalty": 0.0,
+            "frequency_penalty": 0.0,
+            "extra_body": self._build_extra_body(),
+        }
+        if tools:
+            payload["tools"] = tools
+            payload["tool_choice"] = "auto"
+            payload["parallel_tool_calls"] = True
+        return payload
+
+    def _build_extra_body(self) -> Dict[str, Any]:
+        if self.config.enable_thinking:
+            return {
+                "enable_thinking": True,
+                "thinking": {"type": "enabled"},
+                "reasoning": {"enabled": True},
+            }
+        return {}
+
+    def _accumulate_reasoning_details(
+        self, store: Dict[str, Any], payload: Any
+    ) -> None:
+        if payload is None:
+            return
+
+        store.setdefault("chunks", [])
+        store.setdefault("aggregated_text", "")
+
+        def _append_block(block: Dict[str, Any]) -> None:
+            store["chunks"].append(block)
+            store["aggregated_text"] += (
+                block.get("text") or block.get("summary") or block.get("data") or ""
+            )
+
+        if isinstance(payload, list):
+            for block in payload:
+                if isinstance(block, dict):
+                    _append_block(block)
+        elif isinstance(payload, dict):
+            _append_block(payload)
+        elif isinstance(payload, str):
+            _append_block({"type": "reasoning.text", "text": payload})
+
+    def _render_reasoning_for_console(self, payload: Any) -> str:
+        """
+        仅用于控制台打印，优先输出 text/summary，其次序列化 JSON。
+        """
+        if isinstance(payload, dict):
+            if "text" in payload and isinstance(payload["text"], str):
+                return payload["text"]
+            if "summary" in payload and isinstance(payload["summary"], str):
+                return payload["summary"]
+            if "data" in payload and isinstance(payload["data"], str):
+                return " Entrypted reasoning...\n"
+            try:
+                return json.dumps(payload, ensure_ascii=False)
+            except TypeError:
+                return str(payload)
+
+        if isinstance(payload, list):
+            # 对于列表，逐块渲染并拼接
+            return "".join(self._render_reasoning_for_console(item) for item in payload)
+
+        if isinstance(payload, str):
+            return payload
+
+        return str(payload)
+
+    def _extract_text(self, obj: Any) -> str:
+        content = getattr(obj, "content", None)
+        if not content:
+            return ""
+        if isinstance(content, str):
+            return content
+        if isinstance(content, list):
+            parts = []
+            for item in content:
+                text = getattr(item, "text", None)
+                if text:
+                    parts.append(text)
+            return "".join(parts)
+        return ""
+
+    def _accumulate_tool_call_chunk(
+        self,
+        accumulator: Dict[int, Dict[str, Any]],
+        chunk: Any,
+    ) -> None:
+        index = chunk.index
+        entry = accumulator.setdefault(
+            index,
+            {
+                "id": getattr(chunk, "id", ""),
+                "type": getattr(chunk, "type", "function"),
+                "function": {"name": "", "arguments": ""},
+            },
+        )
+
+        if chunk.function:
+            if chunk.function.name:
+                entry["function"]["name"] = chunk.function.name
+            if chunk.function.arguments:
+                entry["function"]["arguments"] += chunk.function.arguments
+
+    def _finalize_tool_calls(
+        self, raw_tool_calls: Optional[List[Any]]
+    ) -> Optional[List[Dict[str, Any]]]:
+        if not raw_tool_calls:
+            return None
+
+        finalized = []
+        for tool_call in raw_tool_calls:
+            call_dict = self._tool_call_to_dict(tool_call)
+            fn_name = call_dict["function"]["name"]
+            arguments = call_dict["function"]["arguments"]
+            fixed_arguments = self._validate_and_fix_tool_arguments(fn_name, arguments)
+            json.loads(fixed_arguments)
+            call_dict["function"]["arguments"] = fixed_arguments
+            finalized.append(call_dict)
         print("\n")
         logger.info(
+            "llm.tool_calls_detected",
+            tool_calls_count=len(finalized),
+            tool_names=[call["function"]["name"] for call in finalized],
+        )
+        return finalized
+
+    def _tool_call_to_dict(self, tool_call: Any) -> Dict[str, Any]:
+        if isinstance(tool_call, dict):
+            function = tool_call.get("function", {})
+            return {
+                "id": tool_call.get("id", ""),
+                "type": tool_call.get("type", "function"),
+                "function": {
+                    "name": function.get("name", ""),
+                    "arguments": function.get("arguments", ""),
+                },
+            }
+
+        function = getattr(tool_call, "function", None)
+        return {
+            "id": getattr(tool_call, "id", ""),
+            "type": getattr(tool_call, "type", "function"),
+            "function": {
+                "name": getattr(function, "name", ""),
+                "arguments": getattr(function, "arguments", ""),
+            },
+        }
+
+    def _maybe_print_header(self, title: str, condition: bool) -> None:
+        if condition:
+            print(f"\n{'=' * 20}{title}{'=' * 20}\n")
+
+    def _log_response(
+        self,
+        content: str,
+        reasoning_details: Dict[str, Any],
+        usage: Optional[Any],
+    ) -> None:
+        prompt_tokens = getattr(usage, "prompt_tokens", 0) if usage else 0
+        completion_tokens = getattr(usage, "completion_tokens", 0) if usage else 0
+        total_tokens = getattr(usage, "total_tokens", 0) if usage else 0
+        reasoning_text = reasoning_details.get("aggregated_text", "")
+        reasoning_chunk_size = len(reasoning_details.get("chunks", []))
+
+        logger.info(
             "llm.response",
-            chars=len(answer_content),
-            reasoning_chars=len(reasoning_content),
+            chars=len(content),
+            reasoning_chars=len(reasoning_text),
+            reasoning_chunk_size=reasoning_chunk_size,
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
             total_tokens=total_tokens,
         )
 
-        # 构建返回结果
-        if tool_calls_accumulator:
-            # 将累积的工具调用转换为有序列表
-            sorted_indices = sorted(tool_calls_accumulator.keys())
-            tool_calls_list = []
-
-            for idx in sorted_indices:
-                tool_call = tool_calls_accumulator[idx]
-                # 验证参数是否为合法JSON
-                try:
-                    fixed_arguments = self._validate_and_fix_tool_arguments(
-                        tool_call["function"]["name"],
-                        tool_call["function"]["arguments"],
-                    )
-                    tool_call["function"]["arguments"] = fixed_arguments
-                    json.loads(tool_call["function"]["arguments"])
-                except json.JSONDecodeError as e:
-                    logger.error(
-                        "llm.invalid_tool_arguments",
-                        function_name=tool_call["function"]["name"],
-                        arguments=tool_call["function"]["arguments"],
-                        error=str(e),
-                    )
-                    raise ValueError(f"工具调用参数JSON解析失败: {e}")
-
-                tool_calls_list.append(
-                    {
-                        "id": tool_call["id"],
-                        "type": tool_call["type"],
-                        "function": {
-                            "name": tool_call["function"]["name"],
-                            "arguments": tool_call["function"]["arguments"],
-                        },
-                    }
-                )
-
-            logger.info(
-                "llm.tool_calls_detected",
-                tool_calls_count=len(tool_calls_list),
-                tool_names=[tc["function"]["name"] for tc in tool_calls_list],
-            )
-
-            # 返回推理内容 + 工具调用信息（不执行）
-            return LLMResult(
-                content=answer_content,
-                reasoning_content=reasoning_content,
-                tool_calls=tool_calls_list,
-                usage=usage,
-            )
-
-        # 返回推理内容 + 最终生成内容
-        return LLMResult(
-            content=answer_content,
-            reasoning_content=reasoning_content,
-            tool_calls=None,
-            usage=usage,
-        )
-
     def _validate_and_fix_tool_arguments(
         self, function_name: str, arguments_str: str
     ) -> str:
-        """
-        验证并自动修复工具调用的参数字符串
-
-        修复策略（按优先级）：
-        1. 尝试直接解析，成功则返回原字符串
-        2. 移除末尾多余的 {}、[]、"" 等污染字符
-        3. 提取第一个完整的 JSON 对象
-        4. 无法修复则抛出详细错误
-
-        Args:
-            function_name: 函数名称，用于日志记录
-            arguments_str: 累积的参数字符串
-
-        Returns:
-            修复后的合法JSON字符串
-
-        Raises:
-            ValueError: 如果无法修复JSON格式错误
-        """
-        # 策略1: 直接尝试解析
         try:
             json.loads(arguments_str)
-            return arguments_str  # 合法，直接返回
+            return arguments_str
         except json.JSONDecodeError as original_error:
             logger.warning(
                 "llm.tool_arguments_invalid",
@@ -278,17 +407,11 @@ class LLMClient:
             )
 
             original_length = len(arguments_str)
-
-            # 策略2: 移除末尾多余的空白和污染模式
             cleaned = arguments_str.strip()
-
-            # 移除末尾连续的空对象、数组、引号
-            # 例如: {...}{} -> {...}
             cleaned = re.sub(r"(?:{}\s*)+(?=\s*$)", "", cleaned)
             cleaned = re.sub(r"(?:\[\]\s*)+(?=\s*$)", "", cleaned)
             cleaned = re.sub(r'(?:""\s*)+(?=\s*$)', "", cleaned)
 
-            # 再次尝试解析
             try:
                 json.loads(cleaned)
                 logger.info(
@@ -302,7 +425,6 @@ class LLMClient:
             except json.JSONDecodeError:
                 pass
 
-            # 策略3: 提取第一个完整的 JSON 对象
             if cleaned.startswith("{"):
                 depth = 0
                 in_string = False
@@ -313,11 +435,9 @@ class LLMClient:
                     if escape_next:
                         escape_next = False
                         continue
-
                     if char == "\\" and in_string:
                         escape_next = True
                         continue
-
                     if char == '"' and not in_string:
                         in_string = True
                     elif char == '"' and in_string:
@@ -346,14 +466,12 @@ class LLMClient:
                     except json.JSONDecodeError:
                         pass
 
-            # 策略4: 无法修复，抛出详细错误
             logger.error(
                 "llm.tool_arguments_unfixable",
                 function_name=function_name,
                 original_arguments=arguments_str[:500],
                 error=str(original_error),
             )
-
             raise ValueError(
                 f"工具调用参数JSON解析失败 [函数: {function_name}]: {original_error}\n"
                 f"参数预览: {arguments_str[:200]}{'...' if len(arguments_str) > 200 else ''}\n"

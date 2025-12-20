@@ -125,7 +125,7 @@ tools = [
                     },
                     "max_depth": {
                         "type": "integer",
-                        "description": "最大递归深度。根目录为深度 0，1 表示只遍历一层子目录。缺省表示不限或使用服务端默认值。",
+                        "description": "最大递归深度。根目录为深度 0，1 表示只遍历一层子目录。缺省表示使用默认值。",
                     },
                     "include_hidden": {
                         "type": "boolean",
@@ -246,6 +246,38 @@ tools = [
     {
         "type": "function",
         "function": {
+            "name": "Read",
+            "description": """读取任意文件。- 适用场景：
+            - 完整异常堆栈可读取（例如已经从Grep得到了异常事件在日志中的行数，需要进一步查看完整堆栈）
+            - 读取配置文件
+            - 探测文件格式（必须指定limit）
+            - 不适用场景：
+            - 可以通过Grep/Inspect快速获取到完整信息的场景
+            """,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "file_path": {
+                        "type": "string",
+                        "description": "文件路径",
+                    },
+                    "offset": {
+                        "type": "number",
+                        "description": "起始行数，默认0",
+                    },
+                    "limit": {
+                        "type": "number",
+                        "description": "读取的行数，不填则使用默认值",
+                    },
+                },
+                "required": ["file_path"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "AnalyzeCode",
             "description": "在日志或知识不足时，请求专家分析项目代码以补充证据。",
             "parameters": {
@@ -316,11 +348,15 @@ class ReActAgent:
             rsp = await self.llm.acomplete(messages=self.trajectory_msgs, tools=tools)
 
             if rsp.requires_tool_execution:
+                # https://openrouter.ai/docs/guides/best-practices/reasoning-tokens#anthropic-models-with-reasoning-tokens
+                reasoning_content = rsp.reasoning_details.get("aggregated_text", "")
+                reasoning_details = rsp.reasoning_details.get("chunks", [])
                 self.trajectory_msgs.append(
                     {
                         "role": "assistant",
                         "content": rsp.content,
-                        "reasoning_content": rsp.reasoning_content,
+                        "reasoning_content": reasoning_content,
+                        "reasoning_details": reasoning_details,
                         "tool_calls": rsp.tool_calls,
                     }
                 )
@@ -392,5 +428,5 @@ class ReActAgent:
     def _dump_toolcall(self, tool, tool_input):
         if self.config.dump_tool_call:
             print(
-                f"{WHITE_BOLD}{tool.name}:\n{RESET}{GRAY_NORMAL}{json.dumps(tool_input,ensure_ascii=False,indent=4)}{RESET}"
+                f"{WHITE_BOLD}{tool.name}:\n{RESET}{GRAY_NORMAL}{json.dumps(tool_input, ensure_ascii=False, indent=4)}{RESET}"
             )

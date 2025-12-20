@@ -4,6 +4,8 @@ import shutil
 import subprocess
 from typing import List, Optional
 
+from util.file_util import is_in_roots
+
 MAX_BYTES = 200_000  # 单次工具返回最大字节
 TIMEOUT_S = 8  # 单次工具超时时间
 
@@ -17,7 +19,7 @@ def grep_file(
     max_matches: int = 500,
     log_sandbox_dirs: list[str] = [],
 ) -> str:
-    if not _is_in_roots(p=path, log_sandbox_dirs=log_sandbox_dirs):
+    if not is_in_roots(p=path, root_dirs=log_sandbox_dirs):
         return "[tool] path not allowed"
     if _check_ripgrep():
         return _grep_with_ripgrep(
@@ -41,17 +43,6 @@ def apply_time_filter(content: str, time_range: str) -> str:
             filtered_lines.append(line)
 
     return "\n".join(filtered_lines)
-
-
-def _is_in_roots(p: str, log_sandbox_dirs: list[str]) -> bool:
-    try:
-        rp = Path(p).resolve()
-        for r in log_sandbox_dirs:
-            if rp.is_relative_to(Path(r).resolve()):
-                return True
-        return False
-    except Exception:
-        return False
 
 
 def _limit(s: str) -> str:

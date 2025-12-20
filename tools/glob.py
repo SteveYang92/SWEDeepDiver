@@ -19,7 +19,7 @@ class GlobInput(ToolInput):
         ),
     )
     max_depth: Optional[int] = Field(
-        default=None,
+        default=3,
         description=(
             "最大递归深度。根目录为深度 0，1 表示只遍历一层子目录。"
             "若为 None，则不限制递归深度。"

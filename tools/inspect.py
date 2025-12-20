@@ -16,8 +16,6 @@ import structlog
 logger = structlog.get_logger(__name__)
 
 INSPECT_LOG_PROMPT_FILE = config.prompt_dir / "inspector.md"
-INSPECT_CONFIG_FILE = config.config_dir / "inspect_rules.md"
-INSPECT_CONFIG_PLACE_HOLDER = "{{inspect_rules}}"
 
 
 def _dump_log(category, res):
@@ -92,13 +90,7 @@ class InspectLogTool(BaseTool):
         return rsp.content
 
     def _get_sys_prompt(self) -> str:
-        system_prompt = read_content(INSPECT_LOG_PROMPT_FILE)
-
-        # config
-        def get_config(m):
-            return read_content(INSPECT_CONFIG_FILE)
-
-        return re.sub(INSPECT_CONFIG_PLACE_HOLDER, get_config, system_prompt)
+        return read_content(INSPECT_LOG_PROMPT_FILE)
 
     def _global_info(self, inp, pattern) -> str:
         res = grep_file(

@@ -39,6 +39,7 @@ class LLMConfig(BaseModel):
     enable_thinking: bool
     dump_thinking: bool
     dump_answer: bool
+    stream: bool
 
 
 class DeepDiverConfig(BaseModel):
@@ -136,6 +137,7 @@ class Config:
             "enable_thinking": base_llm.get("enable_thinking", True),
             "dump_thinking": base_llm.get("dump_thinking", True),
             "dump_answer": base_llm.get("dump_answer", True),
+            "stream": base_llm.get("stream", True),
         }
         inspector = raw_config.get("inspector", {})
         reviewer = raw_config.get("reviewer", {})

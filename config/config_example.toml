@@ -11,6 +11,7 @@ timeout = 120.0
 enable_thinking = true
 dump_thinking = true
 dump_answer = true
+stream = true
 # override default llm config
 [deepdiver.llm.glm]
 model = "glm-4.6"
@@ -36,6 +37,7 @@ timeout = 120.0
 enable_thinking = false
 dump_thinking = false
 dump_answer = false
+stream = false
 
 # reviewer
 [reviewer]
@@ -50,6 +52,7 @@ timeout = 120.0
 enable_thinking = true
 dump_thinking = true
 dump_answer = false
+stream = false
 
 # tool config
 [tools]

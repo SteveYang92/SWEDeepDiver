@@ -5,6 +5,7 @@ import time
 from tools.analyze_code import AnalyzeCodeTool
 from tools.glob import GlobTool
 from tools.grep import GrepTool
+from tools.read import ReadTool
 from tools.review import ReviewEvicenceTool
 from tools.ask_human import AskHumanTool
 from tools.load_knowledge import LoadKnowledgeTool
@@ -21,6 +22,8 @@ from app.processor import data_masker
 
 # Bug desc
 bug_desc = test_case_entry
+# Code path
+code_path = ""
 
 
 async def main(llm_config_name: str = "default"):
@@ -33,7 +36,8 @@ async def main(llm_config_name: str = "default"):
     tool_registry.register(LoadKnowledgeTool())
     tool_registry.register(ReviewEvicenceTool())
     tool_registry.register(AskHumanTool())
-    tool_registry.register(AnalyzeCodeTool())
+    tool_registry.register(AnalyzeCodeTool(code_path))
+    tool_registry.register(ReadTool())
     # Agent
     agent = ReActAgent(
         llm=LLMClient(
