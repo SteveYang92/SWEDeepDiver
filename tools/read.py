@@ -1,11 +1,10 @@
 import os
 import asyncio
-from site import abs_paths
 from typing import Any, Optional
 from pathlib import Path
 
 from pydantic import Field
-from react_core.tools import BaseTool, ToolError, ToolInput, ToolResult
+from react_core.tool import BaseTool, ToolError, ToolInput, ToolResult
 from app.config import config
 from util.file_util import is_in_roots
 from app.processor import data_masker
@@ -15,14 +14,14 @@ from util.log_truncate import truncate_line
 class ReadInput(ToolInput):
     """读取工具的输入参数模型"""
 
-    file_path: str = Field(description="The absolute path to the file to read")
+    file_path: str = Field(description="文件绝对或相对路径")
     offset: Optional[int] = Field(
         default=0,
-        description="The line number to start reading from (0-based). Only provide if the file is too large to read at once",
+        description="起始行数，默认0",
     )
     limit: Optional[int] = Field(
         default=100,
-        description="The maximum number of lines to read. Only provide if the file is too large to read at once.",
+        description="读取的行数，不填则使用默认值（默认100，最大300）",
     )
 
 
@@ -37,9 +36,13 @@ class ReadTool(BaseTool):
     """
 
     name = "Read"
-    description = (
-        "Safely read file contents with offset and limit support for large files"
-    )
+    description = """读取任意文件。- 适用场景：
+            - 完整异常堆栈可读取（例如已经从Grep得到了异常事件在日志中的行数，需要进一步查看完整堆栈）
+            - 读取配置文件
+            - 探测文件格式（必须指定limit）
+            - 不适用场景：
+            - 可以通过Grep/Inspect快速获取到完整信息的场景
+            """
     input_model = ReadInput
     timeout_s = 10.0  # 文件读取超时时间
 

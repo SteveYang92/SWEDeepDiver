@@ -4,12 +4,12 @@ from typing import Any
 from pathlib import Path
 from pydantic import Field
 
-from react_core.tools import BaseTool, ToolInput, ToolResult
+from react_core.tool import BaseTool, ToolInput, ToolResult
 
 
 class LoadKnowledgeInput(ToolInput):
     knowledge_key: str = Field(
-        description="知识标识符（如Login/Network/Unknown）",
+        description="知识库类型标识，例如：Login",
         min_length=1,
         max_length=50,
         pattern=r"^[A-Za-z0-9_]+$",  # 只允许字母数字下划线
@@ -18,7 +18,7 @@ class LoadKnowledgeInput(ToolInput):
 
 class LoadKnowledgeTool(BaseTool):
     name = "LoadKnowledge"
-    description = "从本地knowledge/目录加载问题相关的原始Markdown知识文档"
+    description = "加载与问题相关的诊断知识库。"
     input_model = LoadKnowledgeInput
     timeout_s = 2.0
     dump_observation = False

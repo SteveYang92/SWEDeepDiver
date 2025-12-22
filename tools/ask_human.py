@@ -3,18 +3,18 @@ import sys
 from pydantic import Field
 from typing import Any
 
-from react_core.tools import BaseTool, ToolInput, ToolResult
+from react_core.tool import BaseTool, ToolInput, ToolResult
 
 
 class AskHumanInput(ToolInput):
     question: str = Field(
-        description="需要用户确认或补充的信息", min_length=1, max_length=2000
+        description="要向用户提出的问题，需简洁明确。", min_length=1, max_length=2000
     )
 
 
 class AskHumanTool(BaseTool):
     name = "AskHuman"
-    description = "阻塞式等待用户从终端输入，返回用户原始输入"
+    description = "向用户请求补充/确认关键信息。"
     input_model = AskHumanInput
     timeout_s = 3600  # 设置一个极大的超时（1小时），确保不会意外超时
 

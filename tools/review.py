@@ -4,7 +4,7 @@ from typing import Dict, List, Optional
 from pydantic import Field
 from app.config import config
 from react_core.llm import LLMClient
-from react_core.tools import BaseTool, ToolInput, ToolResult
+from react_core.tool import BaseTool, ToolInput, ToolResult
 import structlog
 from util.file_util import read_content
 
@@ -30,25 +30,31 @@ MAX_COMMIT_COUNT_PLACE_HOLDER = "{{max_commit_count}}"
 
 
 class ReviewEvicenceInput(ToolInput):
-    path: str = Field(description="完整日志路径")
-    issue: str = Field(description="用户问题")
-    ref_knowledge_keys: list[str] = Field(description="引用的知识Key")
-    timeline_event: str = Field(description="当前时间轴事件")
-    evidence_chain: str = Field(description="当前的证据链（根因->中间事件->表象）")
-    knowledge_evidence: str = Field(description="支持当前证据链和结论的知识证据")
-    log_evidence: str = Field(description="支持当前证据链和结论的日志依据")
+    path: str = Field(description="当前主要分析使用的日志文件路径。")
+    issue: str = Field(description="用户问题的完整描述。")
+    ref_knowledge_keys: list[str] = Field(
+        description="当前引用的知识类型 key 列表，例如：Login。"
+    )
+    timeline_event: str = Field(description="当前完整的时间轴事件总结。")
+    evidence_chain: str = Field(
+        description="当前的证据链描述（根因->中间事件->表象问题）。"
+    )
+    knowledge_evidence: str = Field(
+        description="支持当前证据链和结论的知识库、技术常识依据。"
+    )
+    log_evidence: str = Field(
+        description="支持当前证据链和结论的关键日志依据（时间+事件）。"
+    )
     code_analysis_evidence: Optional[str] = Field(
-        default="无", description="支持当前证据链和结论的日志依据"
+        default="无", description="代码分析的关键证据"
     )
-    other_basis: Optional[str] = Field(
-        default="无", description="支持当前证据链和结论的其他依据"
-    )
-    conclusion: str = Field(description="分析结论")
+    other_basis: Optional[str] = Field(default="无", description="其他依据")
+    conclusion: str = Field(description="你当前的结论。")
 
 
 class ReviewEvicenceTool(BaseTool):
     name = "Review"
-    description = "评审当前的证据链"
+    description = "请求专家评审当前的证据链与现阶段结论。"
     input_model = ReviewEvicenceInput
 
     def __init__(self):

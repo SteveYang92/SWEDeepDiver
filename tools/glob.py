@@ -6,7 +6,7 @@ from typing import Any, List, Optional
 
 from pydantic import Field
 
-from react_core.tools import BaseTool, ToolInput, ToolResult, ToolError
+from react_core.tool import BaseTool, ToolInput, ToolResult, ToolError
 
 
 class GlobInput(ToolInput):
@@ -25,7 +25,7 @@ class GlobInput(ToolInput):
             "若为 None，则不限制递归深度。"
         ),
     )
-    include_hidden: bool = Field(
+    include_hidden: Optional[bool] = Field(
         default=False,
         description="是否包含隐藏文件和隐藏目录（以点号开头）。默认 false。",
     )

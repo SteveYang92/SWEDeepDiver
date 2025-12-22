@@ -4,7 +4,7 @@ from typing import Dict, List, Optional
 from pydantic import Field
 from app.config import config
 from react_core.llm import LLMClient
-from react_core.tools import BaseTool, ToolInput, ToolResult
+from react_core.tool import BaseTool, ToolInput, ToolResult
 from util.grep_util import apply_time_filter, grep_file
 from util.log_sorter import sort_logs_with_stacktrace
 from util.log_truncate import truncate_line, truncate_log_omit_edges
@@ -23,20 +23,24 @@ def _dump_log(category, res):
     print(f"\n{GRAY_NORMAL}{res}{RESET}")
 
 
-class InspectLogInput(ToolInput):
-    path: str = Field(description="file path to inspect")
-    knowledge_key: list[str] = Field(description="current knownedge keys")
-    pattern: str = Field(description="关注的pattern")
+class InspectInput(ToolInput):
+    path: str = Field(description="日志文件路径")
+    knowledge_key: Optional[list[str]] = Field(
+        description="当前使用到的知识类型 key 列表"
+    )
+    pattern: Optional[str] = Field(description="grep 兼容正则，用于统计的关键字/模式。")
     time_range: Optional[str] = Field(
         default=None,  # 默认值为None，表示不启用时间过滤
-        description="时间范围过滤，格式 'HH:mm:ss-HH:mm:ss'",
+        description="时间范围，格式为 HH:mm:ss-HH:mm:ss",
     )
 
 
-class InspectLogTool(BaseTool):
+class InspectTool(BaseTool):
     name = "Inspect"
-    description = "统计日志中的异常"
-    input_model = InspectLogInput
+    description = (
+        "在给定时间窗口内扫描日志的错误密度/异常分布/事件分布，用于缩小排查范围。"
+    )
+    input_model = InspectInput
 
     def __init__(self):
         super().__init__()

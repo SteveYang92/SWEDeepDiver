@@ -16,7 +16,7 @@ date_placeholder = "{{current_date}}"
 support_knowledge_placeholder = "{{support_knowledge}}"
 
 
-def main_agent_prompt(available_tools_text: str) -> str:
+def main_agent_prompt() -> str:
     """
     生成系统提示
     """

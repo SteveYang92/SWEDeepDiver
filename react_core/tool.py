@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Dict, Callable, Tuple
+from typing import Any, Dict, Callable, List, Optional, Tuple
 from pydantic import BaseModel, Field, ValidationError
 import structlog
 import math
@@ -53,6 +53,58 @@ class BaseTool:
     async def __call__(self, data: Any) -> ToolResult:
         raise NotImplementedError
 
+    @classmethod
+    def _parameters_from_input_model(cls) -> Dict[str, Any]:
+        """根据 input_model 生成 LLM tool 的 parameters 声明。"""
+        model = cls.input_model
+
+        # 兼容 pydantic v1 / v2
+        if hasattr(model, "model_json_schema"):  # pydantic v2
+            schema = model.model_json_schema()
+        else:  # pydantic v1
+            schema = model.schema()
+
+        return {
+            "type": "object",
+            "properties": schema.get("properties", {}),
+            # 非 Optional 且无默认值的字段会自动出现在 required 中
+            "required": schema.get("required", []),
+        }
+
+    @classmethod
+    def to_llm_function(cls) -> Dict[str, Any]:
+        """
+        生成 LLM tool 的 function 声明：
+        {
+          "name": ...,
+          "description": ...,
+          "parameters": {...}
+        }
+        """
+        return {
+            "name": cls.name,
+            "description": cls.description,
+            "parameters": cls._parameters_from_input_model(),
+        }
+
+    @classmethod
+    def to_openai_tool(cls) -> Dict[str, Any]:
+        """
+        生成 OpenAI tools 格式：
+        {
+          "type": "function",
+          "function": {
+             "name": ...,
+             "description": ...,
+             "parameters": {...}
+          }
+        }
+        """
+        return {
+            "type": "function",
+            "function": cls.to_llm_function(),
+        }
+
 
 class ToolRegistry:
     def __init__(self) -> None:
@@ -68,11 +120,8 @@ class ToolRegistry:
             raise ToolError(f"Unknown tool: {name}")
         return self._tools[name]
 
-    def as_instructions(self) -> str:
-        lines = []
-        for tool in self._tools.values():
-            lines.append(f"- {tool.name}: {tool.description}")
-        return "\n".join(lines)
+    def as_llm_tools(self) -> List[Dict[str, Any]]:
+        return [tool.to_openai_tool() for tool in self._tools.values()]
 
     def list_names(self) -> Tuple[str, ...]:
         return tuple(self._tools.keys())

@@ -10,9 +10,9 @@ from tools.review import ReviewEvicenceTool
 from tools.ask_human import AskHumanTool
 from tools.load_knowledge import LoadKnowledgeTool
 from tools.process_file import ProcessFileTool
-from tools.inspect import InspectLogTool
+from tools.inspect import InspectTool
 from react_core.llm import LLMClient
-from react_core.tools import ToolRegistry
+from react_core.tool import ToolRegistry
 from react_core.agent import ReActAgent, ReActAgentConfig
 from util.measure_time import auto_time_unit
 from test_case import test_case_entry
@@ -32,7 +32,7 @@ async def main(llm_config_name: str = "default"):
     tool_registry.register(GrepTool())
     tool_registry.register(GlobTool())
     tool_registry.register(ProcessFileTool())
-    tool_registry.register(InspectLogTool())
+    tool_registry.register(InspectTool())
     tool_registry.register(LoadKnowledgeTool())
     tool_registry.register(ReviewEvicenceTool())
     tool_registry.register(AskHumanTool())

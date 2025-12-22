@@ -8,7 +8,7 @@ from pydantic import Field
 
 from app.config import config
 from app.processor import data_masker
-from react_core.tools import BaseTool, ToolInput, ToolResult, ToolError
+from react_core.tool import BaseTool, ToolInput, ToolResult, ToolError
 from util.grep_util import is_in_roots, apply_time_filter
 from util.log_truncate import truncate_log_omit_edges
 
@@ -56,9 +56,7 @@ class GrepInput(ToolInput):
     time_range: Optional[str] = Field(
         default=None,
         description=(
-            "可选扩展字段，仅对带时间戳的日志有意义，格式为 'HH:mm:ss-HH:mm:ss'。"
-            "如果后端实现支持，可在服务端按时间窗口过滤结果；"
-            "本示例中不对 time_range 做额外处理，仅作为兼容字段保留。"
+            "日志时间窗口，仅对带时间戳的日志有意义，格式为 'HH:mm:ss-HH:mm:ss'。"
         ),
     )
 

@@ -1,19 +1,25 @@
 import asyncio
 from typing import Optional
 from pydantic import Field
-from react_core.tools import BaseTool, ToolInput, ToolResult
+from react_core.tool import BaseTool, ToolInput, ToolResult
 from util.analyze_code_util import analyze_with_claude_code
 
 
 class AnalyzeCodeInput(ToolInput):
-    analyze_target: str = Field(description="Describe your target to analyze")
-    log: str = Field(description="Related log")
-    stack_trace: Optional[str] = Field(default="", description="Related stack trace")
+    analyze_target: str = Field(
+        description="需要代码专家分析的目标，2-5 句话说明要搞清楚什么问题。"
+    )
+    log: str = Field(
+        description="与问题相关的关键日志（建议包含完整上下文，可帮助分析者全面了解要分析的问题）；每条日志包含时间 + TAG + 内容(多条日志用换行符分割)"
+    )
+    stack_trace: Optional[str] = Field(
+        default="", description="与问题相关的异常堆栈/代码调用栈等"
+    )
 
 
 class AnalyzeCodeTool(BaseTool):
     name = "AnalyzeCode"
-    description = "Analyze code and locate root cause of issue"
+    description = "在日志或知识不足时，请求专家分析项目代码以补充证据。"
     input_model = AnalyzeCodeInput
 
     def __init__(self, code_path: str = ""):
