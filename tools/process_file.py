@@ -38,7 +38,7 @@ class ProcessFileTool(BaseTool):
 
     def __init__(self):
         super().__init__()
-        self.log_sandbox_dir = config.log_dir
+        self.output_dir = config.processed_file_dir
         self.log_decryptor = log_descyptor
 
     async def __call__(self, data: Any) -> ToolResult:
@@ -86,7 +86,7 @@ class ProcessFileTool(BaseTool):
         try:
             decrypted_log_path = self.log_decryptor.decrypt(
                 input_file_path=temp_path,
-                output_dir=self.log_sandbox_dir,
+                output_dir=self.output_dir,
                 filename=filename,
             )
             os.remove(temp_path)
@@ -96,6 +96,6 @@ class ProcessFileTool(BaseTool):
                 "tools.processfile", path=temp_path, msg=f"Decrypt file failed {e}"
             )
             os.remove(temp_path)
-            log_path = os.path.join(self.log_sandbox_dir, filename)
+            log_path = os.path.join(self.output_dir, filename)
             shutil.copy2(original_path, log_path)
             processed_files.append(log_path)

@@ -46,7 +46,7 @@ class InspectTool(BaseTool):
         super().__init__()
         self.llm = LLMClient(config.inspector.llm)
         self.max_lines_of_grep_result = config.inspector.max_line_of_grep
-        self.log_sandbox_dir = config.log_dir
+        self.allow_dir = config.processed_file_dir
 
     async def __call__(self, data) -> ToolResult:
         inp = self.parse_input(data)
@@ -102,7 +102,7 @@ class InspectTool(BaseTool):
             pattern=pattern,
             before=0,
             after=0,
-            log_sandbox_dirs=[self.log_sandbox_dir],
+            allow_dirs=[self.allow_dir],
         )
         if res:
             res = data_masker.mask(res)
@@ -117,7 +117,7 @@ class InspectTool(BaseTool):
             pattern=pattern,
             before=0,
             after=0,
-            log_sandbox_dirs=[self.log_sandbox_dir],
+            allow_dirs=[self.allow_dir],
         )
         if inp.time_range and res:
             res = apply_time_filter(res, inp.time_range)
@@ -134,7 +134,7 @@ class InspectTool(BaseTool):
             pattern=pattern,
             before=2,
             after=2,
-            log_sandbox_dirs=[self.log_sandbox_dir],
+            allow_dirs=[self.allow_dir],
         )
         if res:
             res = data_masker.mask(res)
@@ -149,7 +149,7 @@ class InspectTool(BaseTool):
             pattern=pattern,
             before=0,
             after=0,
-            log_sandbox_dirs=[self.log_sandbox_dir],
+            allow_dirs=[self.allow_dir],
         )
         if res:
             res = data_masker.mask(res)
@@ -166,7 +166,7 @@ class InspectTool(BaseTool):
             pattern=pattern,
             before=0,
             after=0,
-            log_sandbox_dirs=[self.log_sandbox_dir],
+            allow_dirs=[self.allow_dir],
         )
         if inp.time_range and res:
             res = apply_time_filter(res, inp.time_range)

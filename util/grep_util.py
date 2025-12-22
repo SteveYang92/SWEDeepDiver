@@ -17,9 +17,9 @@ def grep_file(
     before: int = 0,
     after: int = 0,
     max_matches: int = 500,
-    log_sandbox_dirs: list[str] = [],
+    allow_dirs: list[str] = [],
 ) -> str:
-    if not is_in_roots(p=path, root_dirs=log_sandbox_dirs):
+    if not is_in_roots(p=path, root_dirs=allow_dirs):
         return "[tool] path not allowed"
     if _check_ripgrep():
         return _grep_with_ripgrep(

@@ -47,7 +47,7 @@ class ReadTool(BaseTool):
     timeout_s = 10.0  # 文件读取超时时间
 
     # 安全配置：允许读取的根目录（生产环境建议配置为具体目录）
-    ALLOWED_ROOT_DIR = config.log_dir
+    ALLOWED_ROOT_DIR = config.processed_file_dir
     # 安全配置：禁止读取的文件扩展名
     FORBIDDEN_EXTENSIONS = {".db", ".sqlite", ".key", ".pem", ".p12", ".pfx"}
     # 安全配置：最大允许读取的文件大小

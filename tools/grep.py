@@ -73,7 +73,7 @@ class GrepTool(BaseTool):
     def __init__(self):
         super().__init__()
         self.max_lines_of_grep_result = config.tools.grep.max_line_of_grep
-        self.log_sandbox_dir = config.log_dir
+        self.allow_dir = config.processed_file_dir
         self.grep_id = ""
 
     async def __call__(self, data: Any) -> ToolResult:
@@ -83,7 +83,7 @@ class GrepTool(BaseTool):
             return ToolResult(ok=False, content="No paths provided")
 
         for path in inp.paths:
-            if not is_in_roots(p=path, root_dirs=[self.log_sandbox_dir]):
+            if not is_in_roots(p=path, root_dirs=[self.allow_dir]):
                 return ToolResult(ok=False, content=f"[tool] path not allowed:{path}")
 
         # 构建 ripgrep 命令

@@ -22,11 +22,11 @@ WORKSPACE_ROOT = PROJECT_ROOT / "workspace"
 PROMPT_DIR = PROJECT_ROOT / "prompt"
 CONFIG_DIR = PROJECT_ROOT / "config"
 CONFIG_FILE_PATH = CONFIG_DIR / "config.toml"
-LOG_DIR = WORKSPACE_ROOT / "log_processed"
+PROCESSED_FILE_DIR = WORKSPACE_ROOT / "processed_files"
 KNOWLEDGE_DIR = WORKSPACE_ROOT / "knowledge"
 
 WORKSPACE_ROOT.mkdir(parents=True, exist_ok=True)
-LOG_DIR.mkdir(parents=True, exist_ok=True)
+PROCESSED_FILE_DIR.mkdir(parents=True, exist_ok=True)
 
 
 class LLMConfig(BaseModel):
@@ -190,8 +190,8 @@ class Config:
         return self._config.log_processor
 
     @property
-    def log_dir(self) -> str:
-        return LOG_DIR.relative_to(PROJECT_ROOT)
+    def processed_file_dir(self) -> str:
+        return PROCESSED_FILE_DIR.relative_to(PROJECT_ROOT)
 
     @property
     def prompt_dir(self) -> Path:
