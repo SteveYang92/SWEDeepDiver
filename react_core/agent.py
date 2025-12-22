@@ -20,11 +20,13 @@ class ReActAgentConfig:
         allow_tool_hallucination: bool = False,
         dump_observation: bool = True,
         dump_tool_call: bool = True,
+        terminate_tool_name: str = "",
     ):
         self.max_steps = max_steps
         self.allow_tool_hallucination = allow_tool_hallucination
         self.dump_observation = dump_observation
         self.dump_tool_call = dump_tool_call
+        self.terminate_tool_name = terminate_tool_name
 
 
 class ReActAgent:
@@ -38,6 +40,7 @@ class ReActAgent:
         self.tools = tools
         self.config = config or ReActAgentConfig()
         self.trajectory_msgs: List[Dict[str, str]] = []
+        self.should_finish = False
 
     async def aask(self, user_query: str) -> Dict[str, Any]:
         """
@@ -46,6 +49,9 @@ class ReActAgent:
           - final_answer: str
           - steps: list of dicts with thought/action/observation
         """
+
+        # Rest state
+        self.should_finish = False
 
         # Seed conversation with system + user messages
         system = main_agent_prompt()
@@ -72,6 +78,9 @@ class ReActAgent:
                     }
                 )
                 await self._call_tools(rsp.tool_calls)
+                continue
+            elif not self.should_finish:
+                logger.warning("react.step.no_toocall", step=step_idx)
                 continue
             else:
                 logger.info("react.step.final", step=step_idx)
@@ -127,6 +136,13 @@ class ReActAgent:
                 "content": tool_result,
             }
         )
+
+        if self._is_terminate_tool_call(function_name):
+            logger.info("react.terminate")
+            self.should_finish = True
+
+    def _is_terminate_tool_call(self, tool_name):
+        return self.config.terminate_tool_name == tool_name
 
     def _dump_observation(self, tool, observation):
         if self.config.dump_observation and tool.dump_observation:

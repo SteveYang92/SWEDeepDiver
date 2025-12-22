@@ -11,6 +11,8 @@ from tools.ask_human import AskHumanTool
 from tools.load_knowledge import LoadKnowledgeTool
 from tools.process_file import ProcessFileTool
 from tools.inspect import InspectTool
+from tools.terminate import TerminateTool
+
 from react_core.llm import LLMClient
 from react_core.tool import ToolRegistry
 from react_core.agent import ReActAgent, ReActAgentConfig
@@ -38,13 +40,17 @@ async def main(llm_config_name: str = "default"):
     tool_registry.register(AskHumanTool())
     tool_registry.register(AnalyzeCodeTool(code_path))
     tool_registry.register(ReadTool())
+    tool_registry.register(TerminateTool())
     # Agent
     agent = ReActAgent(
         llm=LLMClient(
             config.deepdiver.llm.get(llm_config_name, config.deepdiver.llm["default"])
         ),
         tools=tool_registry,
-        config=ReActAgentConfig(max_steps=config.deepdiver.max_steps),
+        config=ReActAgentConfig(
+            max_steps=config.deepdiver.max_steps,
+            terminate_tool_name=TerminateTool().name,
+        ),
     )
 
     start = time.perf_counter()
