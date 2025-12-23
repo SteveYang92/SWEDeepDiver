@@ -1,8 +1,9 @@
+from pydantic import Field
 from react_core.tool import BaseTool, ToolInput, ToolResult
 
 
 class TerminateInput(ToolInput):
-    pass
+    status: str = Field(description="任务状态，success/failure")
 
 
 class TerminateTool(BaseTool):
