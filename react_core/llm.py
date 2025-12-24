@@ -271,8 +271,6 @@ class LLMClient:
                 return payload["summary"]
             if "data" in payload and isinstance(payload["data"], str):
                 return " Entrypted reasoning...\n"
-            if "data" in payload and isinstance(payload["data"], str):
-                return " Entrypted reasoning...\n"
             try:
                 return json.dumps(payload, ensure_ascii=False)
             except TypeError:

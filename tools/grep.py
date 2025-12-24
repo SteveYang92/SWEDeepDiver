@@ -1,6 +1,4 @@
 import asyncio
-import os
-import pathlib
 import subprocess
 from typing import Any, List, Optional
 
@@ -23,7 +21,7 @@ class GrepInput(ToolInput):
         )
     )
     glob: Optional[List[str]] = Field(
-        default=None,
+        default=[],
         description=(
             "文件过滤的 glob 模式列表（相对于每个 path）。"
             "例如 ['**/*.log', '**/*.trace']。为空或缺省时不过滤。"
@@ -121,9 +119,6 @@ class GrepTool(BaseTool):
         # pattern 和 paths
         cmd.append(inp.pattern)
         cmd.extend(inp.paths)
-
-        # 注意：本示例中不对 inp.time_range 做额外处理
-        # 如果你的后端实现支持，可扩展为根据 time_range 对结果进行二次过滤
 
         def run_rg() -> ToolResult:
             try:

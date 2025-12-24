@@ -54,21 +54,67 @@ class BaseTool:
         raise NotImplementedError
 
     @classmethod
+    def _get_model_schema(cls) -> Dict[str, Any]:
+        """获取 Pydantic 模型的 JSON schema，兼容 v1/v2。"""
+        if hasattr(cls.input_model, "model_json_schema"):  # pydantic v2
+            return cls.input_model.model_json_schema()
+        return cls.input_model.schema()  # pydantic v1
+
+    @classmethod
+    def _simplify_anyof_for_llm(cls, schema: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        简化 JSON schema 中的 anyOf 结构，提高 LLM 兼容性。
+        只保留 description、type、items（数组类型）三个字段。
+        """
+        properties = schema.get("properties", {}).copy()
+        required = schema.get("required", []).copy()
+
+        for field_name, field_schema in properties.items():
+            # 只保留 description（如果存在）
+            simplified = {}
+            if "description" in field_schema:
+                simplified["description"] = field_schema["description"]
+
+            if "anyOf" in field_schema:
+                # 提取非 null 的类型定义
+                non_null_types = [
+                    t for t in field_schema["anyOf"] if t.get("type") != "null"
+                ]
+            else:
+                non_null_types = []
+
+            # 是Optional字段，且只有一个非 null 类型，则简化
+            if len(non_null_types) == 1:
+                type_def = non_null_types[0]
+                simplified["type"] = type_def.get("type")
+
+                # 如果是数组类型，保留 items
+                if type_def.get("type") == "array" and "items" in type_def:
+                    simplified["items"] = type_def["items"]
+
+                properties[field_name] = simplified
+
+            # 不是Optional字段
+            if "anyOf" not in field_schema:
+                type_def = field_schema
+                simplified["type"] = type_def.get("type")
+
+                # 如果是数组类型，保留 items
+                if type_def.get("type") == "array" and "items" in type_def:
+                    simplified["items"] = type_def["items"]
+                properties[field_name] = simplified
+        return {"properties": properties, "required": required}
+
+    @classmethod
     def _parameters_from_input_model(cls) -> Dict[str, Any]:
         """根据 input_model 生成 LLM tool 的 parameters 声明。"""
-        model = cls.input_model
-
-        # 兼容 pydantic v1 / v2
-        if hasattr(model, "model_json_schema"):  # pydantic v2
-            schema = model.model_json_schema()
-        else:  # pydantic v1
-            schema = model.schema()
+        schema = cls._get_model_schema()
+        simplified = cls._simplify_anyof_for_llm(schema)
 
         return {
             "type": "object",
-            "properties": schema.get("properties", {}),
-            # 非 Optional 且无默认值的字段会自动出现在 required 中
-            "required": schema.get("required", []),
+            "properties": simplified["properties"],
+            "required": simplified["required"],
         }
 
     @classmethod

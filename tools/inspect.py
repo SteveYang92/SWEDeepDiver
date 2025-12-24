@@ -26,7 +26,7 @@ def _dump_log(category, res):
 class InspectInput(ToolInput):
     path: str = Field(description="日志文件路径")
     knowledge_key: Optional[list[str]] = Field(
-        description="当前使用到的知识类型 key 列表"
+        default=[], description="当前使用到的知识类型 key 列表"
     )
     pattern: Optional[str] = Field(description="grep 兼容正则，用于统计的关键字/模式。")
     time_range: Optional[str] = Field(

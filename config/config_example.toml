@@ -59,10 +59,6 @@ stream = false
 [tools.grep]
 max_line_of_grep = 100
 
-# issue dir config
-[issue_dir]
-dirs = ["examples"]
-
 # log filter config
 [log_processor]
 max_char_count_per_line = 400

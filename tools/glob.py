@@ -12,7 +12,7 @@ from react_core.tool import BaseTool, ToolInput, ToolResult, ToolError
 class GlobInput(ToolInput):
     root: str = Field(description="要探索的根目录绝对路径或相对路径。")
     patterns: Optional[List[str]] = Field(
-        default=None,
+        default=[],
         description=(
             "glob 模式数组（相对于 root），例如 ['**/*.log', '**/*.trace']。"
             "若为 None 或空，则默认使用 ['**/*']。"

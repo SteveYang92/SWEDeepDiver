@@ -11,7 +11,7 @@ from tools.ask_human import AskHumanTool
 from tools.load_knowledge import LoadKnowledgeTool
 from tools.process_file import ProcessFileTool
 from tools.inspect import InspectTool
-from tools.terminate import TerminateTool
+from tools.finish import FinishTool
 
 from react_core.llm import LLMClient
 from react_core.tool import ToolRegistry
@@ -40,7 +40,7 @@ async def main(llm_config_name: str = "default"):
     tool_registry.register(AskHumanTool())
     tool_registry.register(AnalyzeCodeTool(code_path))
     tool_registry.register(ReadTool())
-    tool_registry.register(TerminateTool())
+    tool_registry.register(FinishTool())
     # Agent
     agent = ReActAgent(
         llm=LLMClient(
@@ -49,7 +49,7 @@ async def main(llm_config_name: str = "default"):
         tools=tool_registry,
         config=ReActAgentConfig(
             max_steps=config.deepdiver.max_steps,
-            terminate_tool_name=TerminateTool().name,
+            finish_tool_name=FinishTool().name,
         ),
     )
 

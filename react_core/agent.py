@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import json
 from typing import Any, Dict, List, Optional
 import structlog
@@ -8,9 +7,12 @@ import structlog
 from .llm import LLMClient
 from .tool import ToolRegistry, ToolError, ToolResult
 from .prompt import main_agent_prompt
-from util.font_style import GRAY_NORMAL, BLUE_BOLD, RESET, WHITE_BOLD
+from util.font_style import GRAY_NORMAL, RESET, WHITE_BOLD
 
 logger = structlog.get_logger(__name__)
+
+stuck_reminder = "Observed duplicate responses. Consider new strategies and avoid repeating ineffective paths already attempted."
+finish_reminder = "If you have finish the task，You should call Finish tool before output the final answer."
 
 
 class ReActAgentConfig:
@@ -20,13 +22,15 @@ class ReActAgentConfig:
         allow_tool_hallucination: bool = False,
         dump_observation: bool = True,
         dump_tool_call: bool = True,
-        terminate_tool_name: str = "",
+        finish_tool_name: str = "",
+        duplicate_threshold: int = 2,
     ):
         self.max_steps = max_steps
         self.allow_tool_hallucination = allow_tool_hallucination
         self.dump_observation = dump_observation
         self.dump_tool_call = dump_tool_call
-        self.terminate_tool_name = terminate_tool_name
+        self.finish_tool_name = finish_tool_name
+        self.duplicate_threshold = duplicate_threshold
 
 
 class ReActAgent:
@@ -39,7 +43,7 @@ class ReActAgent:
         self.llm = llm
         self.tools = tools
         self.config = config or ReActAgentConfig()
-        self.trajectory_msgs: List[Dict[str, str]] = []
+        self.trajectory_msgs: List[Dict[str, Any]] = []
         self.should_finish = False
 
     async def aask(self, user_query: str) -> Dict[str, Any]:
@@ -68,22 +72,31 @@ class ReActAgent:
                 # https://openrouter.ai/docs/guides/best-practices/reasoning-tokens#anthropic-models-with-reasoning-tokens
                 reasoning_content = rsp.reasoning_details.get("aggregated_text", "")
                 reasoning_details = rsp.reasoning_details.get("chunks", [])
-                self.trajectory_msgs.append(
-                    {
-                        "role": "assistant",
-                        "content": rsp.content,
-                        "reasoning_content": reasoning_content,
-                        "reasoning_details": reasoning_details,
-                        "tool_calls": rsp.tool_calls,
-                    }
-                )
+                assistant_msg = {
+                    "role": "assistant",
+                    "content": rsp.content,
+                    "reasoning_content": reasoning_content,
+                    "reasoning_details": reasoning_details,
+                    "tool_calls": rsp.tool_calls,
+                }
+                self.trajectory_msgs.append(assistant_msg)
                 await self._call_tools(rsp.tool_calls)
+                # Check if stucked
+                if self._is_stuck():
+                    self._handle_stuck(step_idx)
                 continue
             elif not self.should_finish:
                 logger.warning("react.step.no_toocall", step=step_idx)
+                reminder_msg = {
+                    "role": "user",
+                    "content": self._build_system_reminder_message(finish_reminder),
+                }
+                self.trajectory_msgs.append(reminder_msg)
                 continue
             else:
-                logger.info("react.step.final", step=step_idx)
+                logger.info(
+                    "react.step.final", step=step_idx, should_finish=self.should_finish
+                )
                 return {"final_answer": rsp.content.strip()}
 
         # Max steps reached: force finalization
@@ -137,12 +150,47 @@ class ReActAgent:
             }
         )
 
-        if self._is_terminate_tool_call(function_name):
-            logger.info("react.terminate")
+        if self._is_finish_tool_call(function_name):
+            logger.info("react.finishtask")
             self.should_finish = True
 
-    def _is_terminate_tool_call(self, tool_name):
-        return self.config.terminate_tool_name == tool_name
+    def _is_finish_tool_call(self, tool_name) -> bool:
+        return self.config.finish_tool_name == tool_name
+
+    def _is_stuck(self) -> bool:
+        """Check if the agent is stuck in a loop by detecting duplicate content"""
+        if len(self.trajectory_msgs) < 2:
+            return False
+
+        last_message = self.trajectory_msgs[-1]
+        if not last_message.get("content", "") and not last_message.get(
+            "reasoning_content", ""
+        ):
+            return False
+
+        # Count identical content occurrences
+        duplicate_count = sum(
+            1
+            for msg in reversed(self.trajectory_msgs[:-1])
+            if (
+                msg.get("role", "") == "assistant"
+                and msg.get("content", "") == last_message.get("content", "")
+                and msg.get("reasoning_content", "")
+                == last_message.get("reasoning_content", "")
+            )
+        )
+        return duplicate_count >= self.config.duplicate_threshold
+
+    def _handle_stuck(self, step):
+        logger.warning("react.stucked", step=step)
+        reminder_msg = {
+            "role": "user",
+            "content": self._build_system_reminder_message(stuck_reminder),
+        }
+        self.trajectory_msgs.append(reminder_msg)
+
+    def _build_system_reminder_message(self, content):
+        return f"<system-reminder>{content}</system-reminder>"
 
     def _dump_observation(self, tool, observation):
         if self.config.dump_observation and tool.dump_observation:

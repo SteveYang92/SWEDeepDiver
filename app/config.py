@@ -74,10 +74,6 @@ class ToolsConfig(BaseModel):
     grep: GrepConfig
 
 
-class IssueDirConfig(BaseModel):
-    dirs: list[str]
-
-
 class LogProcessorConfig(BaseModel):
     max_char_count_per_line: int
     ignore_patterns: Optional[list[str]] = Field(default=[])
@@ -88,7 +84,6 @@ class AppConfig(BaseModel):
     inspector: InspectorConfig
     reviewer: ReviewerConfig
     tools: ToolsConfig
-    issue_dir: IssueDirConfig
     log_processor: LogProcessorConfig
 
 
@@ -142,7 +137,6 @@ class Config:
         inspector = raw_config.get("inspector", {})
         reviewer = raw_config.get("reviewer", {})
         tools = raw_config.get("tools", {})
-        issue_dir = raw_config.get("issue_dir", {})
         log_processor = raw_config.get("log_processor", {})
 
         app_config = {
@@ -159,7 +153,6 @@ class Config:
             "inspector": inspector,
             "reviewer": reviewer,
             "tools": tools,
-            "issue_dir": issue_dir,
             "log_processor": log_processor,
         }
 
@@ -180,10 +173,6 @@ class Config:
     @property
     def tools(self) -> ToolsConfig:
         return self._config.tools
-
-    @property
-    def issue_dir(self) -> IssueDirConfig:
-        return self._config.issue_dir
 
     @property
     def log_processor(self) -> LogProcessorConfig:
