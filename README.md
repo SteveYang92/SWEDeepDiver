@@ -9,6 +9,15 @@ SWEDeepDiver 是一个面向 **软件工程（SWE）问题** 的自动化分析 
 
 ---
 
+## Demo
+
+
+
+https://github.com/user-attachments/assets/1cf08ca4-91d1-4175-bfe1-daf9a45c3970
+
+
+---
+
 ## 安装
 ### 使用`uv`安装（推荐）
 #### 1. 安装`uv`
