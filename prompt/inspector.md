@@ -94,7 +94,8 @@
   - `onCreate/onResume/onPause/onDestroy` 等生命周期；
   - 路由跳转（如 `navigateTo`、`push`、`pop`、`openPage`）。
   - 在“事件类型”中可标为：`页面切换` / `路由跳转`。
-  - 描述页面/路由切换本身的行为，不要描述从xx切换到yyy
+  - 如涉及生命周期变化，需说明
+  - 如页面实例包含Hash信息，需保留
 
 - **网络请求相关**
   - 请求开始/结束、URL、方法（GET/POST…）、状态码；

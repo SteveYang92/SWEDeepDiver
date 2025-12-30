@@ -35,15 +35,15 @@ class ReviewEvicenceInput(ToolInput):
     ref_knowledge_keys: list[str] = Field(
         description="当前引用的知识类型 key 列表，例如：Login。"
     )
-    timeline_event: str = Field(description="当前完整的时间轴事件总结。")
+    timeline_event: str = Field(description="当前完整的事件时间轴总结，格式采用【时间轴】模版格式")
     evidence_chain: str = Field(
-        description="当前的证据链描述（根因->中间事件->表象问题）。"
+        description="当前的证据链，格式采用【证据链】模版格式"
     )
     knowledge_evidence: str = Field(
         description="支持当前证据链和结论的知识库、技术常识依据。"
     )
     log_evidence: str = Field(
-        description="支持当前证据链和结论的关键日志依据（时间+事件）。"
+        description="支持当前证据链和结论的关键日志依据（时间+事件），所有证据链中引用的事件都要列举"
     )
     code_analysis_evidence: Optional[str] = Field(
         default="无", description="代码分析的关键证据"
