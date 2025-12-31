@@ -50,6 +50,8 @@ class LLMClient:
         wait=wait_exponential(multiplier=0.5, min=0.5, max=8),
         retry=retry_if_exception_type((TimeoutError, Exception)),
     )
+
+    # TODO 不同的LLM Provider completion实现存在差异，目前还不支持扩展，后续增加LLM Provider适配层
     async def acomplete(
         self,
         messages: List[Dict[str, Any]],
@@ -108,7 +110,7 @@ class LLMClient:
                 # 推理详情
                 raw_reasoning_details = self._extract_reasoning(delta)
                 if raw_reasoning_details:
-                    self._accumulate_reasoning_details(
+                    self._accumulate_reasoning_details_chunk(
                         reasoning_details, raw_reasoning_details
                     )
                     if self.config.dump_thinking and not answer_started:
@@ -179,7 +181,9 @@ class LLMClient:
         reasoning_details: Dict[str, Any] = {}
         raw_reasoning_details = self._extract_reasoning(message)
         if raw_reasoning_details:
-            self._accumulate_reasoning_details(reasoning_details, raw_reasoning_details)
+            self._accumulate_reasoning_details_chunk(
+                reasoning_details, raw_reasoning_details
+            )
 
         if self.config.dump_thinking and raw_reasoning_details:
             self._maybe_print_header("思考过程", True)
@@ -236,7 +240,7 @@ class LLMClient:
             }
         return {}
 
-    def _accumulate_reasoning_details(
+    def _accumulate_reasoning_details_chunk(
         self, store: Dict[str, Any], payload: Any
     ) -> None:
         if payload is None:
@@ -245,8 +249,50 @@ class LLMClient:
         store.setdefault("chunks", [])
         store.setdefault("aggregated_text", "")
 
+        def _merge_block_by_index(store: Dict[str, Any], block: Dict[str, Any]) -> bool:
+            """
+            对于带有 index 的 reasoning block，如果 chunks 中已经存在同 index、同 type 的块，
+            则进行字段级合并，而不是新增一条记录。
+
+            返回 True 表示已合并（不需要再 append），False 表示未找到可合并目标。
+            """
+            index = block.get("index", None)
+            if index is None:
+                return False
+
+            chunks = store["chunks"]
+            for existing in chunks:
+                if existing.get("index") == index and existing.get("type") == block.get(
+                    "type"
+                ):
+                    # 文本类字段累加
+                    for key in ("text", "summary", "data"):
+                        new_val = block.get(key)
+                        if new_val:
+                            existing[key] = (existing.get(key, "") or "") + new_val
+
+                    # 其他字段：如果原来没有，则补上；已有则保持原值
+                    for key, value in block.items():
+                        if key in ("text", "summary", "data"):
+                            continue
+                        if key not in existing or existing[key] in ("", None):
+                            existing[key] = value
+
+                    return True
+
+            return False
+
         def _append_block(block: Dict[str, Any]) -> None:
-            store["chunks"].append(block)
+            if not isinstance(block, dict):
+                return
+
+            # 先尝试按 index 合并
+            merged = _merge_block_by_index(store, block)
+            if not merged:
+                # 未找到同 index 块则作为新块存入
+                store["chunks"].append(block)
+
+            # 无论是否合并，都要把本次新增的文本内容累加到 aggregated_text
             store["aggregated_text"] += (
                 block.get("text") or block.get("summary") or block.get("data") or ""
             )
@@ -258,7 +304,7 @@ class LLMClient:
         elif isinstance(payload, dict):
             _append_block(payload)
         elif isinstance(payload, str):
-            _append_block({"type": "reasoning.text", "text": payload})
+            _append_block({"type": "reasoning.text", "text": payload, "index": 0})
 
     def _render_reasoning_for_console(self, payload: Any) -> str:
         """
@@ -271,6 +317,8 @@ class LLMClient:
                 return payload["summary"]
             if "data" in payload and isinstance(payload["data"], str):
                 return " Entrypted reasoning...\n"
+            if "signature" in payload and isinstance(payload["signature"], str):
+                return "\n"
             try:
                 return json.dumps(payload, ensure_ascii=False)
             except TypeError:
