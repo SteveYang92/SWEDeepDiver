@@ -12,7 +12,7 @@ from util.font_style import GRAY_NORMAL, RESET, WHITE_BOLD
 logger = structlog.get_logger(__name__)
 
 stuck_reminder = "Observed duplicate responses. Consider new strategies and avoid repeating ineffective paths already attempted."
-finish_reminder = "If you have finish the task，You should call Finish tool before output the final answer."
+finish_reminder = "No **Tool Calling** but only reasonging(or answer), somthing wrong? If you have finish the task，you should call `Finish` tool before output the final answer."
 
 
 class ReActAgentConfig:
@@ -64,9 +64,10 @@ class ReActAgent:
 
         for step_idx in range(1, self.config.max_steps + 1):
             logger.info("react.step.start", step=step_idx)
-            rsp = await self.llm.acomplete(
-                messages=self.trajectory_msgs, tools=self.tools.as_llm_tools()
-            )
+            rsp = await self._acomplete()
+
+            if rsp is None:
+                continue
 
             if rsp.requires_tool_execution:
                 # https://openrouter.ai/docs/guides/best-practices/reasoning-tokens#anthropic-models-with-reasoning-tokens
@@ -104,6 +105,26 @@ class ReActAgent:
         return {
             "final_answer": "I'm stopping due to step limit. Here is my best answer based on the progress above.",
         }
+
+    async def _acomplete(self):
+        try:
+            return await self.llm.acomplete(
+                messages=self.trajectory_msgs, tools=self.tools.as_llm_tools()
+            )
+        except ToolError as e:
+            logger.error("llm.acomplete.error", error=f"{e!r}")
+            if not self.config.allow_tool_hallucination:
+                # Nudge model and continue
+                tool_error = f"Tool error: {e!r}"
+                self.trajectory_msgs.append(
+                    {
+                        "role": "user",
+                        "content": tool_error,
+                    }
+                )
+                return None
+            else:
+                raise
 
     async def _call_tools(self, tool_calls: List[Dict[str, Any]]):
         for tool_call in tool_calls:

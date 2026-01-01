@@ -5,6 +5,8 @@ import json
 import re
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass, field
+import httpx
+import openai
 from tenacity import (
     retry,
     stop_after_attempt,
@@ -16,6 +18,7 @@ from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionToolParam
 
 from app.config import LLMConfig
+from .tool import ToolError
 
 logger = structlog.get_logger(__name__)
 
@@ -39,6 +42,15 @@ class LLMClient:
     支持推理内容提取与工具调用的LLM客户端，可按需切换流式/非流式传输。
     """
 
+    retryable_exceptions = (
+        TimeoutError,  # 请求超时
+        ConnectionError,  # 连接失败
+        httpx.TimeoutException,  # httpx超时
+        openai.APIConnectionError,  # OpenAI 连接错误
+        openai.APITimeoutError,  # OpenAI 超时
+        openai.RateLimitError,  # OpenAI 限流
+    )
+
     def __init__(self, config: LLMConfig):
         self.client = AsyncOpenAI(api_key=config.api_key, base_url=config.base_url)
         self.config = config
@@ -48,7 +60,7 @@ class LLMClient:
         reraise=True,
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=0.5, min=0.5, max=8),
-        retry=retry_if_exception_type((TimeoutError, Exception)),
+        retry=retry_if_exception_type(retryable_exceptions),
     )
 
     # TODO 不同的LLM Provider completion实现存在差异，目前还不支持扩展，后续增加LLM Provider适配层
@@ -234,9 +246,9 @@ class LLMClient:
     def _build_extra_body(self) -> Dict[str, Any]:
         if self.config.enable_thinking:
             return {
-                "enable_thinking": True,
-                "thinking": {"type": "enabled"},
-                "reasoning": {"enabled": True},
+                "enable_thinking": True,  # Alibaba Qwen
+                "thinking": {"type": "enabled"},  # DeepSeek
+                "reasoning": {"enabled": True, "effort": "high"},  # OpenRouter
             }
         return {}
 
@@ -520,7 +532,7 @@ class LLMClient:
                 original_arguments=arguments_str[:500],
                 error=str(original_error),
             )
-            raise ValueError(
+            raise ToolError(
                 f"工具调用参数JSON解析失败 [函数: {function_name}]: {original_error}\n"
                 f"参数预览: {arguments_str[:200]}{'...' if len(arguments_str) > 200 else ''}\n"
                 f"参数长度: {len(arguments_str)}\n"
