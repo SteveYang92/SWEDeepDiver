@@ -19,7 +19,7 @@ def get_project_root() -> Path:
 
 PROJECT_ROOT = get_project_root()
 WORKSPACE_ROOT = PROJECT_ROOT / "workspace"
-PROMPT_DIR = PROJECT_ROOT / "domain" / "engine" / "prompt"
+PROMPT_DIR = PROJECT_ROOT / "prompt"
 CONFIG_DIR = PROJECT_ROOT / "config"
 CONFIG_FILE_PATH = CONFIG_DIR / "config.toml"
 PROCESSED_FILE_DIR = WORKSPACE_ROOT / "processed_files"
