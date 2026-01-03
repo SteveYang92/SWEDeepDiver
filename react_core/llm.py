@@ -52,7 +52,9 @@ class LLMClient:
     )
 
     def __init__(self, config: LLMConfig):
-        self.client = AsyncOpenAI(api_key=config.api_key, base_url=config.base_url)
+        self.client = AsyncOpenAI(
+            api_key=config.provider.api_key, base_url=config.provider.base_url
+        )
         self.config = config
         self._default_stream = config.stream
 

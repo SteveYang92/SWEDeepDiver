@@ -1,10 +1,30 @@
+[[providers]]
+provider_name = "deepseek"
+base_url = "https://api.deepseek.com/v1"
+api_key = "YOUR API KEY"
+[[providers]]
+provider_name = "moonshot"
+base_url = "https://api.moonshot.cn/v1"
+api_key = "YOUR API KEY"
+[[providers]]
+provider_name = "zai"
+base_url = "https://open.bigmodel.cn/api/paas/v4/"
+api_key = "YOUR API KEY"
+[[providers]]
+provider_name = "alibaba"
+base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+api_key = "YOUR API KEY"
+[[providers]]
+provider_name = "openrouter"
+base_url = "https://openrouter.ai/api/v1"
+api_key = "YOUR API KEY"
+
 # analyzer
 [deepdiver]
 max_steps = 30
 [deepdiver.llm]
-model = "deepseek-reasoner"
-base_url = "https://api.deepseek.com/v1"
-api_key = "YOUR API KEY"
+provider_name = "deepseek"
+model = "deepseek-chat"
 max_tokens = 8192
 temperature = 0.1
 timeout = 120.0
@@ -12,11 +32,9 @@ enable_thinking = true
 dump_thinking = true
 dump_answer = true
 stream = true
-# override default llm config
-[deepdiver.llm.glm]
-model = "glm-4.6"
-base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-api_key = "YOUR API KEY"
+[deepdiver.llm.gpt]
+provider_name = "openrouter"
+model = "openai/gpt-5.1"
 
 # log inspector
 [inspector]
@@ -28,31 +46,29 @@ exception_pattern = "^(?!.*ExecutionException)\\S*\\s*\\w+(\\.\\w+)*Exception:"
 env_pattern = "app version:.*"
 context_pattern = "ActMgr"
 [inspector.llm]
-model = "qwen-flash"
-base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-api_key = "YOUR API KEY"
-max_tokens = 10240
+provider_name = "deepseek"
+model = "deepseek-chat"
+max_tokens = 8192
 temperature = 0.2
 timeout = 120.0
 enable_thinking = false
 dump_thinking = false
 dump_answer = false
-stream = false
+stream = true
 
 # reviewer
 [reviewer]
 max_commit_count = 5
 [reviewer.llm]
-model = "deepseek-reasoner"
-base_url = "https://api.deepseek.com/v1"
-api_key = "YOUR API KEY"
-max_tokens = 10240
+provider_name = "deepseek"
+model = "deepseek-chat"
+max_tokens = 8192
 temperature = 0.1
 timeout = 120.0
 enable_thinking = true
-dump_thinking = true
+dump_thinking = false
 dump_answer = false
-stream = false
+stream = true
 
 # tool config
 [tools]

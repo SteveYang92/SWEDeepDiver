@@ -19,7 +19,7 @@ def get_project_root() -> Path:
 
 PROJECT_ROOT = get_project_root()
 WORKSPACE_ROOT = PROJECT_ROOT / "workspace"
-PROMPT_DIR = PROJECT_ROOT / "prompt"
+PROMPT_DIR = PROJECT_ROOT / "domain" / "engine" / "prompt"
 CONFIG_DIR = PROJECT_ROOT / "config"
 CONFIG_FILE_PATH = CONFIG_DIR / "config.toml"
 PROCESSED_FILE_DIR = WORKSPACE_ROOT / "processed_files"
@@ -29,10 +29,19 @@ WORKSPACE_ROOT.mkdir(parents=True, exist_ok=True)
 PROCESSED_FILE_DIR.mkdir(parents=True, exist_ok=True)
 
 
-class LLMConfig(BaseModel):
-    model: str
+class ConfigError(Exception):
+    pass
+
+
+class LLMProvider(BaseModel):
+    provider_name: str
     base_url: str
     api_key: str
+
+
+class LLMConfig(BaseModel):
+    provider: LLMProvider
+    model: str
     max_tokens: int
     temperature: float
     timeout: float
@@ -117,25 +126,53 @@ class Config:
 
     def _load_config(self):
         raw_config = self._load_config_as_dict()
+        providers = raw_config.get("providers", [])
         deepdiver = raw_config.get("deepdiver", {})
-        base_llm = deepdiver.get("llm", {})
+        deepdiver_base_llm = deepdiver.get("llm", {})
+
+        def get_provider(provider_name):
+            provider = next(
+                (
+                    provider
+                    for provider in providers
+                    if provider.get("provider_name", "") == provider_name
+                ),
+                None,
+            )
+            if provider is None:
+                raise ConfigError(f"provider is not found: {provider_name}")
+            return provider
+
+        def set_provider(llm):
+            provider_name = llm.get("provider_name", "")
+            llm["provider"] = get_provider(provider_name)
+            return llm
+
         llm_overrides = {
-            k: v for k, v in deepdiver.get("llm", {}).items() if isinstance(v, dict)
+            k: set_provider(v)
+            for k, v in deepdiver.get("llm", {}).items()
+            if isinstance(v, dict)
         }
+
         default_settings = {
-            "model": base_llm.get("model"),
-            "base_url": base_llm.get("base_url"),
-            "api_key": base_llm.get("api_key"),
-            "max_tokens": base_llm.get("max_tokens", 4096),
-            "temperature": base_llm.get("temperature", 1.0),
-            "timeout": base_llm.get("timeout", 120.0),
-            "enable_thinking": base_llm.get("enable_thinking", True),
-            "dump_thinking": base_llm.get("dump_thinking", True),
-            "dump_answer": base_llm.get("dump_answer", True),
-            "stream": base_llm.get("stream", True),
+            "provider": get_provider(deepdiver_base_llm.get("provider_name", "")),
+            "model": deepdiver_base_llm.get("model"),
+            "max_tokens": deepdiver_base_llm.get("max_tokens", 4096),
+            "temperature": deepdiver_base_llm.get("temperature", 1.0),
+            "timeout": deepdiver_base_llm.get("timeout", 120.0),
+            "enable_thinking": deepdiver_base_llm.get("enable_thinking", True),
+            "dump_thinking": deepdiver_base_llm.get("dump_thinking", True),
+            "dump_answer": deepdiver_base_llm.get("dump_answer", True),
+            "stream": deepdiver_base_llm.get("stream", True),
         }
         inspector = raw_config.get("inspector", {})
+        inspector_llm = inspector.get("llm", {})
+        set_provider(inspector_llm)
+
         reviewer = raw_config.get("reviewer", {})
+        reviewer_llm = reviewer.get("llm", {})
+        set_provider(reviewer_llm)
+
         tools = raw_config.get("tools", {})
         log_processor = raw_config.get("log_processor", {})
 
